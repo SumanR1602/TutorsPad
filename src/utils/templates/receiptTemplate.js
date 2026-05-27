@@ -13,13 +13,14 @@ export function buildReceiptHTML({
   const balanceColor    = balancePositive ? '#16a34a' : '#dc2626'
   const balanceBg       = balancePositive ? '#f0fdf4' : '#fef2f2'
   const balanceBorder   = balancePositive ? '#bbf7d0' : '#fecaca'
+  const nameSlug        = student.name.split(' ').join('-')
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Receipt_${student.name.replace(/\s+/g, '-')}_${recNo}</title>
+  <title>Receipt_${nameSlug}_${recNo}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>

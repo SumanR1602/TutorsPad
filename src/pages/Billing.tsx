@@ -123,7 +123,19 @@ export default function Billing() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setInvModal({ student, dateFrom: '', dateTo: '' })}
+                      onClick={() => {
+                        const studentPayments = payments
+                          .filter((p) => p.studentId === student.id)
+                          .sort((a, b) => b.date.localeCompare(a.date))
+                        const last = studentPayments[0]
+                        let prefillFrom = ''
+                        if (last) {
+                          const d = new Date(last.date + 'T00:00:00')
+                          d.setDate(d.getDate() + 1)
+                          prefillFrom = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                        }
+                        setInvModal({ student, dateFrom: prefillFrom, dateTo: today })
+                      }}
                       className="flex items-center gap-1 text-xs text-gray-400 hover:text-purple-600 transition-colors"
                       title="Open printable invoice (PDF)"
                     >
