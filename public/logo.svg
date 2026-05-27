@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Desk surface -->
+  <rect x="96" y="248" width="320" height="36" rx="18" fill="white"/>
+
+  <!-- Left leg -->
+  <rect x="128" y="284" width="36" height="120" rx="18" fill="white"/>
+
+  <!-- Right leg -->
+  <rect x="348" y="284" width="36" height="120" rx="18" fill="white"/>
+
+  <!-- Open book on desk -->
+  <!-- Left page -->
+  <path d="M168 136 Q200 128 256 148 L256 248 Q200 228 168 236 Z" fill="rgba(255,255,255,0.92)"/>
+  <!-- Right page -->
+  <path d="M344 136 Q312 128 256 148 L256 248 Q312 228 344 236 Z" fill="rgba(255,255,255,0.75)"/>
+  <!-- Spine line -->
+  <line x1="256" y1="148" x2="256" y2="248" stroke="rgba(79,70,229,0.4)" stroke-width="4"/>
+
+  <!-- Pencil resting on book (right side) -->
+  <rect x="310" y="118" width="14" height="72" rx="7" fill="rgba(255,255,255,0.6)" transform="rotate(20 317 154)"/>
+  <polygon points="317,186 310,202 324,202" fill="rgba(255,255,255,0.5)" transform="rotate(20 317 154)"/>
+</svg>

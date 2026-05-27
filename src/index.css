@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #f8f8ff;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dark body {
+    background-color: #0f172a;
+  }
+}
+
+/* ── Dark mode global text/bg overrides ──────────────────────
+   Instead of adding dark: to every JSX element we override the
+   Tailwind utility classes globally when <html class="dark"> */
+
+/* Gray scale */
+.dark .text-gray-900 { color: #f1f5f9; }
+.dark .text-gray-800 { color: #e2e8f0; }
+.dark .text-gray-700 { color: #cbd5e1; }
+.dark .text-gray-600 { color: #94a3b8; }
+.dark .text-gray-500 { color: #64748b; }
+.dark .text-gray-400 { color: #475569; }
+.dark .text-gray-300 { color: #334155; }
+.dark .bg-gray-50    { background-color: rgba(255,255,255,0.05); }
+.dark .bg-white      { background-color: #1e293b; }
+.dark .border-gray-100 { border-color: #334155; }
+.dark .border-gray-200 { border-color: #475569; }
+.dark .bg-surface    { background-color: #0f172a; }
+
+/* Indigo/primary */
+.dark .bg-indigo-50   { background-color: rgba(99, 102, 241, 0.15); }
+.dark .bg-indigo-100  { background-color: rgba(99, 102, 241, 0.2); }
+.dark .bg-primary-50  { background-color: rgba(99, 102, 241, 0.15); }
+.dark .border-indigo-100 { border-color: rgba(99, 102, 241, 0.35); }
+.dark .border-primary-100 { border-color: rgba(99, 102, 241, 0.35); }
+.dark .text-indigo-900  { color: #a5b4fc; }
+.dark .text-indigo-700  { color: #a5b4fc; }
+.dark .text-indigo-500  { color: #818cf8; }
+.dark .text-indigo-400  { color: #818cf8; }
+.dark .text-primary-700 { color: #a5b4fc; }
+.dark .text-primary-600 { color: #818cf8; }
+
+/* Green / emerald */
+.dark .bg-green-50   { background-color: rgba(34, 197, 94, 0.12); }
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.12); }
+.dark .text-green-700   { color: #86efac; }
+.dark .text-green-600   { color: #4ade80; }
+.dark .text-green-400   { color: #4ade80; }
+.dark .text-green-500   { color: #4ade80; }
+.dark .text-emerald-700 { color: #6ee7b7; }
+.dark .text-emerald-400 { color: #34d399; }
+
+/* Red */
+.dark .bg-red-50   { background-color: rgba(239, 68, 68, 0.12); }
+.dark .text-red-700 { color: #fca5a5; }
+.dark .text-red-600 { color: #f87171; }
+.dark .text-red-500 { color: #f87171; }
+.dark .text-red-400 { color: #f87171; }
+.dark .border-red-100 { border-color: rgba(239, 68, 68, 0.35); }
+
+/* Amber */
+.dark .bg-amber-100  { background-color: rgba(245, 158, 11, 0.15); }
+.dark .text-amber-700 { color: #fcd34d; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+.toast-enter {
+  animation: toast-in 0.2s ease-out both;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 text-white px-4 py-2.5 rounded-xl font-medium text-sm active:scale-95 transition-transform;
+  }
+  .btn-secondary {
+    @apply bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-medium text-sm active:scale-95 transition-transform
+           dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4
+           dark:bg-gray-800 dark:border-gray-700;
+  }
+  .input {
+    @apply w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-500;
+  }
+  .label {
+    @apply block text-xs font-medium text-gray-500 mb-1 dark:text-gray-400;
+  }
+}
