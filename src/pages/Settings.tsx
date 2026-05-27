@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
-import { Bell, Save, X, Moon } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Bell, Save, X, Moon, Upload, Download } from 'lucide-react'
 import Header from '@components/shared/Header'
+import Modal from '@components/shared/Modal'
 import Logo from '@components/shared/Logo'
 import useStore from '@store/useStore'
 import { requestNotificationPermission, showNotification } from '@utils/notifications'
 import { exportAllData } from '@utils/storage'
+import { exportBackupJSON, parseBackupJSON } from '@utils/storage'
+import type { ParsedBackup } from '@utils/storage'
 import TimePicker12h from '@components/shared/TimePicker12h'
 import { useToast } from '@hooks/useToast'
 import type { Settings } from '@/types'
@@ -17,14 +20,18 @@ const THEMES: { value: Theme; label: string }[] = [
 ]
 
 export default function Settings() {
-  const settings       = useStore((s) => s.settings)
-  const updateSettings = useStore((s) => s.updateSettings)
-  const { showToast }  = useToast()
+  const settings        = useStore((s) => s.settings)
+  const updateSettings  = useStore((s) => s.updateSettings)
+  const restoreBackup   = useStore((s) => s.restoreBackup)
+  const { showToast }   = useToast()
 
   const [local, setLocal] = useState<Settings>({ ...settings })
   const [notifStatus, setNotifStatus] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'default',
   )
+  const [pendingImport, setPendingImport] = useState<ParsedBackup | null>(null)
+  const [importError,   setImportError]   = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Refresh permission status when user returns to the tab (e.g. after changing browser settings)
   useEffect(() => {
@@ -52,6 +59,27 @@ export default function Settings() {
   function handleCancel() {
     setLocal({ ...settings })
     showToast('Changes discarded', 'info')
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!fileInputRef.current) return
+    fileInputRef.current.value = ''   // reset so same file can be picked again
+    if (!file) return
+    setImportError(null)
+    try {
+      const parsed = await parseBackupJSON(file)
+      setPendingImport(parsed)
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Invalid backup file.')
+    }
+  }
+
+  function handleConfirmImport() {
+    if (!pendingImport) return
+    restoreBackup(pendingImport.students, pendingImport.sessions, pendingImport.payments)
+    setPendingImport(null)
+    showToast('Data restored from backup', 'success')
   }
 
   async function handleEnableNotifications() {
@@ -164,14 +192,45 @@ export default function Settings() {
         {/* Data */}
         <div className="card space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">Data</h2>
+
+          {/* Export Excel */}
           <button
             onClick={() => exportAllData().catch(console.error)}
-            className="btn-secondary w-full"
+            className="btn-secondary w-full flex items-center justify-center gap-2"
           >
-            Export backup (Excel)
+            <Download size={15} /> Export report (Excel)
           </button>
+
+          {/* Export JSON backup */}
+          <button
+            onClick={exportBackupJSON}
+            className="btn-secondary w-full flex items-center justify-center gap-2"
+          >
+            <Download size={15} /> Export backup (JSON)
+          </button>
+
+          {/* Import JSON backup */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-secondary w-full flex items-center justify-center gap-2"
+          >
+            <Upload size={15} /> Import backup (JSON)
+          </button>
+
+          {importError && (
+            <p className="text-xs text-red-500">{importError}</p>
+          )}
+
           <p className="text-xs text-gray-400">
-            Downloads an Excel file with all your students, sessions, payments and settings. Export regularly as a backup.
+            Export backup regularly and store it in Google Drive or WhatsApp Saved Messages.
+            Import it to fully restore your data on any device.
           </p>
         </div>
 
@@ -189,6 +248,37 @@ export default function Settings() {
           <p className="text-xs text-gray-300">v1.0.0 · Built for teachers</p>
         </div>
       </div>
+
+      {/* Import confirmation modal */}
+      <Modal
+        isOpen={!!pendingImport}
+        onClose={() => setPendingImport(null)}
+        title="Restore from backup?"
+      >
+        {pendingImport && (
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800">
+              This will <strong>replace all current data</strong> with the backup. This cannot be undone.
+            </div>
+            <div className="space-y-1 text-sm text-gray-700">
+              <p>Found in backup:</p>
+              <ul className="ml-4 list-disc text-gray-600 space-y-0.5">
+                <li>{pendingImport.students.length} student{pendingImport.students.length !== 1 ? 's' : ''}</li>
+                <li>{pendingImport.sessions.length} session{pendingImport.sessions.length !== 1 ? 's' : ''}</li>
+                <li>{pendingImport.payments.length} payment{pendingImport.payments.length !== 1 ? 's' : ''}</li>
+              </ul>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setPendingImport(null)} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button onClick={handleConfirmImport} className="btn-primary flex-1">
+                Restore
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

@@ -8,6 +8,75 @@ import useStore from '@store/useStore'
 import { applyBoldStyle } from './excelUtils'
 import type { Student, Session, Payment, Settings } from '@/types'
 
+// ── JSON backup ───────────────────────────────────────────────────────────────
+
+interface BackupFile {
+  version: number
+  exportedAt: string
+  students: Student[]
+  sessions: Session[]
+  payments: Payment[]
+}
+
+export function exportBackupJSON(): void {
+  const { students, sessions, payments } = useStore.getState()
+  const backup: BackupFile = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    students,
+    sessions,
+    payments,
+  }
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `tutordesk-backup-${new Date().toISOString().slice(0, 10)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export interface ParsedBackup {
+  students: Student[]
+  sessions: Session[]
+  payments: Payment[]
+}
+
+/** Reads and validates a .json backup file. Throws a descriptive error if invalid. */
+export async function parseBackupJSON(file: File): Promise<ParsedBackup> {
+  const text = await file.text()
+  let data: BackupFile
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error('File is not valid JSON.')
+  }
+  if (!Array.isArray(data.students)) throw new Error('Missing or invalid "students" array.')
+  if (!Array.isArray(data.sessions)) throw new Error('Missing or invalid "sessions" array.')
+  if (!Array.isArray(data.payments)) throw new Error('Missing or invalid "payments" array.')
+
+  // Basic field validation
+  data.students.forEach((s, i) => {
+    if (!s.id || !s.name || s.ratePerHour == null)
+      throw new Error(`Student at index ${i} is missing required fields (id, name, ratePerHour).`)
+  })
+  const studentIds = new Set(data.students.map((s) => s.id))
+  data.sessions.forEach((s, i) => {
+    if (!s.id || !s.studentId || !s.date || s.hours == null)
+      throw new Error(`Session at index ${i} is missing required fields.`)
+    if (!studentIds.has(s.studentId))
+      throw new Error(`Session at index ${i} references unknown student.`)
+  })
+  data.payments.forEach((p, i) => {
+    if (!p.id || !p.studentId || !p.date || p.amount == null)
+      throw new Error(`Payment at index ${i} is missing required fields.`)
+    if (!studentIds.has(p.studentId))
+      throw new Error(`Payment at index ${i} references unknown student.`)
+  })
+
+  return { students: data.students, sessions: data.sessions, payments: data.payments }
+}
+
 export async function exportAllData(): Promise<void> {
   const { students, sessions, payments, settings } = useStore.getState()
   const studentMap: Record<string, string> = Object.fromEntries(

@@ -41,6 +41,9 @@ interface StoreState {
   // ── Pending reminder actions ─────────────────────────────────────────────
   addPendingReminder: (studentId: string) => void
   dismissPendingReminder: (studentId: string) => void
+
+  // ── Backup restore ───────────────────────────────────────────────────────
+  restoreBackup: (students: Student[], sessions: Session[], payments: Payment[]) => void
 }
 
 const useStore = create<StoreState>()(
@@ -119,6 +122,10 @@ const useStore = create<StoreState>()(
         set((state) => ({
           payments: state.payments.filter((p) => p.id !== id),
         })),
+
+      // ── Backup restore ────────────────────────────────────────────────────
+      restoreBackup: (students, sessions, payments) =>
+        set({ students, sessions, payments }),
 
       // ── Settings ──────────────────────────────────────────────────────────
       updateSettings: (updates) =>
