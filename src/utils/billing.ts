@@ -90,33 +90,11 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
  * Falls back to window.print() if the script hasn't loaded within 5 s.
  */
 export function openPDFWindow(html: string, filename: string): void {
-  const pdfOpts = JSON.stringify({
-    margin: [6, 6, 6, 6],
-    filename: filename + '.pdf',
-    image: { type: 'jpeg', quality: 0.97 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  })
+  void filename // filename is embedded in the template's dlPDF script
 
   const autoHtml = html.replace(
     '</body>',
-    `<script src="/html2pdf.bundle.min.js"><\/script>
-<script>
-(function(){
-  var attempts = 0;
-  var max = 50; // 5 s at 100 ms intervals
-  function tryPDF(){
-    if (typeof html2pdf !== 'undefined'){
-      html2pdf().set(${pdfOpts}).from(document.querySelector('.page')).save();
-    } else if (++attempts < max){
-      setTimeout(tryPDF, 100);
-    } else {
-      window.print();
-    }
-  }
-  window.addEventListener('load', tryPDF);
-})();
-<\/script></body>`,
+    `<script src="/html2pdf.bundle.min.js"><\/script></body>`,
   )
 
   const w = window.open('', '_blank')

@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from '@utils/billing'
 import { Trash2, CreditCard, Pencil } from 'lucide-react'
 import { useToast } from '@hooks/useToast'
 import Modal from '../shared/Modal'
+import ConfirmModal from '../shared/ConfirmModal'
 import EditPaymentForm from '../billing/EditPaymentForm'
 import type { Student, Payment } from '@/types'
 
@@ -19,7 +20,8 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   const getBalance           = useStore((s) => s.getBalance)
   const { showToast }        = useToast()
 
-  const [editPayment, setEditPayment] = useState<Payment | null>(null)
+  const [editPayment,      setEditPayment]      = useState<Payment | null>(null)
+  const [confirmDeleteId,  setConfirmDeleteId]  = useState<string | null>(null)
 
   const payments  = getPaymentsByStudent(student.id)
   const totalPaid = getTotalPaid(student.id)
@@ -28,6 +30,7 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   function handleDelete(paymentId: string, paymentDate: string) {
     deletePayment(paymentId)
     showToast(`Payment on ${paymentDate} removed`, 'info')
+    setConfirmDeleteId(null)
   }
 
   function handleSaveEdit(updates: Partial<Payment>) {
@@ -84,7 +87,7 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
                 <Pencil size={13} />
               </button>
               <button
-                onClick={() => handleDelete(payment.id, payment.date)}
+                onClick={() => setConfirmDeleteId(payment.id)}
                 aria-label="Delete payment"
                 className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-400 transition-colors"
               >
@@ -105,6 +108,16 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
           />
         )}
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          const p = payments.find((x) => x.id === confirmDeleteId)
+          if (p) handleDelete(p.id, p.date)
+        }}
+        message="Are you sure you want to delete this payment? This cannot be undone."
+      />
     </div>
   )
 }

@@ -48,23 +48,22 @@ export function buildReceiptHTML({
     .page {
       position: relative; background: #fff;
       max-width: 760px; margin: 0 auto;
-      border-radius: 14px; overflow: hidden;
+      overflow: hidden;
       box-shadow: 0 4px 28px rgba(22,163,74,.13);
     }
 
     /* ── Watermark ────────────────────────────────────── */
-    .watermark {
-      position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 420px; height: 420px;
-      opacity: 0.10; pointer-events: none; z-index: 0;
+    .wm-svg {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 2;
     }
-    .page > *:not(.watermark) { position: relative; z-index: 1; }
+    .page > *:not(.wm-svg) { position: relative; z-index: 1; }
 
     /* ── Header ───────────────────────────────────────── */
     .rec-header {
       background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
-      padding: 14px 24px; border-radius: 14px 14px 0 0;
+      padding: 14px 24px;
       display: flex; justify-content: space-between; align-items: flex-start; color: #fff;
     }
     .t-name  { font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
@@ -169,7 +168,7 @@ export function buildReceiptHTML({
       html, body { background: #fff !important; padding: 0 !important; }
       .screen-pad { padding: 0 !important; }
       .no-print   { display: none !important; }
-      .page { box-shadow: none !important; border-radius: 0 !important; overflow: visible !important; max-width: 100% !important; }
+      .page { box-shadow: none !important; overflow: visible !important; max-width: 100% !important; }
       .rec-header  { border-radius: 0 !important; }
       .meta-grid   { break-inside: avoid; }
       .payment-box { break-inside: avoid; }
@@ -181,6 +180,18 @@ export function buildReceiptHTML({
       @page { margin: 1.1cm 1.3cm; size: A4; }
     }
   </style>
+  <script>
+    function dlPDF() {
+      if (typeof html2pdf === 'undefined') { window.print(); return; }
+      html2pdf().set({
+        margin: [6,6,6,6],
+        filename: '${recNo}.pdf',
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(document.querySelector('.page')).save();
+    }
+  <\/script>
 </head>
 <body>
 <div class="screen-pad">
@@ -192,29 +203,42 @@ export function buildReceiptHTML({
         <polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
-      Re-download PDF
+      Download PDF
     </button>
   </div>
 
   <div class="page">
 
     <!-- Watermark -->
-    <svg class="watermark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 600" aria-hidden="true">
-      <rect width="512" height="512" rx="112" fill="#15803d"/>
-      <rect x="96" y="248" width="320" height="36" rx="18" fill="white"/>
-      <rect x="128" y="284" width="36" height="120" rx="18" fill="white"/>
-      <rect x="348" y="284" width="36" height="120" rx="18" fill="white"/>
-      <path d="M168 136 Q200 128 256 148 L256 248 Q200 228 168 236 Z" fill="rgba(255,255,255,0.92)"/>
-      <path d="M344 136 Q312 128 256 148 L256 248 Q312 228 344 236 Z" fill="rgba(255,255,255,0.75)"/>
-      <line x1="256" y1="148" x2="256" y2="248" stroke="rgba(22,163,74,0.5)" stroke-width="4"/>
-      <text x="256" y="558" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" fill="#15803d" letter-spacing="-1">TutorDesk</text>
+    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <text x="380" y="560" text-anchor="middle"
+        transform="rotate(-35, 380, 560)"
+        font-family="Inter,Arial,sans-serif" font-size="72" font-weight="700"
+        fill="#15803d" opacity="0.12" letter-spacing="10">TutorDesk</text>
     </svg>
 
     <!-- Header -->
     <div class="rec-header">
-      <div>
-        <div class="t-name">${teacherName}</div>
-        <div class="t-role">Private Tutor</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
+          <svg style="width:36px;height:36px" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+            <defs><linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4338ca"/></linearGradient></defs>
+            <rect width="512" height="512" rx="112" fill="url(#logo-grad)"/>
+            <rect x="96" y="248" width="320" height="36" rx="18" fill="white"/>
+            <rect x="128" y="284" width="36" height="120" rx="18" fill="white"/>
+            <rect x="348" y="284" width="36" height="120" rx="18" fill="white"/>
+            <path d="M168 136 Q200 128 256 148 L256 248 Q200 228 168 236 Z" fill="rgba(255,255,255,0.92)"/>
+            <path d="M344 136 Q312 128 256 148 L256 248 Q312 228 344 236 Z" fill="rgba(255,255,255,0.75)"/>
+            <line x1="256" y1="148" x2="256" y2="248" stroke="rgba(79,70,229,0.4)" stroke-width="4"/>
+            <rect x="310" y="118" width="14" height="72" rx="7" fill="rgba(255,255,255,0.6)" transform="rotate(20 317 154)"/>
+            <polygon points="317,186 310,202 324,202" fill="rgba(255,255,255,0.5)" transform="rotate(20 317 154)"/>
+          </svg>
+          <span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase">TutorDesk</span>
+        </div>
+        <div>
+          <div class="t-name">${teacherName}</div>
+          <div class="t-role">Private Tutor</div>
+        </div>
       </div>
       <div class="rec-right">
         <div class="rec-word">Receipt</div>

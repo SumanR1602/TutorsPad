@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import useStore from '@store/useStore'
 import { formatCurrency, formatDate } from '@utils/billing'
 import { Trash2, BookOpen } from 'lucide-react'
 import { useToast } from '@hooks/useToast'
+import ConfirmModal from '../shared/ConfirmModal'
 import type { Student } from '@/types'
 
 interface StudentSessionHistoryProps {
@@ -13,15 +15,19 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
   const deleteSession        = useStore((s) => s.deleteSession)
   const getTotalHours        = useStore((s) => s.getTotalHours)
   const getTotalDue          = useStore((s) => s.getTotalDue)
+  const payments             = useStore((s) => s.payments)
   const { showToast }        = useToast()
 
   const sessions    = getSessionsByStudent(student.id)
   const totalHours  = getTotalHours(student.id)
   const totalEarned = getTotalDue(student.id)
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
   function handleDelete(sessionId: string, sessionDate: string) {
     deleteSession(sessionId)
     showToast(`Session on ${sessionDate} removed`, 'info')
+    setConfirmDeleteId(null)
   }
 
   if (sessions.length === 0) {
@@ -66,7 +72,7 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
               {session.note && <p className="text-xs text-gray-500 truncate mt-0.5">{session.note}</p>}
             </div>
             <button
-              onClick={() => handleDelete(session.id, session.date)}
+              onClick={() => setConfirmDeleteId(session.id)}
               aria-label="Delete session"
               className="p-1.5 ml-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-400 transition-colors shrink-0"
             >
@@ -75,6 +81,24 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
           </div>
         ))}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          const s = sessions.find((x) => x.id === confirmDeleteId)
+          if (s) handleDelete(s.id, s.date)
+        }}
+        message={(() => {
+          const s = sessions.find((x) => x.id === confirmDeleteId)
+          const isBilled = s
+            ? payments.some((p) => p.studentId === s.studentId && p.date.slice(0, 7) === s.date.slice(0, 7))
+            : false
+          return isBilled
+            ? 'This session has already been billed. Deleting it will reduce the total due and may create a credit balance on the next receipt.'
+            : 'Are you sure you want to delete this session? This cannot be undone.'
+        })()}
+      />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Trash2, Pencil, SlidersHorizontal, X } from 'lucide-react'
 import Header from '@components/shared/Header'
 import Modal from '@components/shared/Modal'
+import ConfirmModal from '@components/shared/ConfirmModal'
 import SessionForm from '@components/sessions/SessionForm'
 import FilterPanel from '@components/sessions/FilterPanel'
 import useStore from '@store/useStore'
@@ -18,13 +19,15 @@ function fmtMonth(ym: string): string {
 export default function Sessions() {
   const students      = useStore((s) => s.students)
   const sessions      = useStore((s) => s.sessions)
+  const payments      = useStore((s) => s.payments)
   const deleteSession = useStore((s) => s.deleteSession)
   const { showToast } = useToast()
 
-  const [showLog,      setShowLog]      = useState(false)
-  const [editSession,  setEditSession]  = useState<Session | null>(null)
-  const [showFilters,  setShowFilters]  = useState(false)
-  const [activeMonth,  setActiveMonth]  = useState<string | null>(null)   // "YYYY-MM" or null = All
+  const [showLog,           setShowLog]           = useState(false)
+  const [editSession,       setEditSession]       = useState<Session | null>(null)
+  const [showFilters,       setShowFilters]       = useState(false)
+  const [activeMonth,       setActiveMonth]       = useState<string | null>(null)
+  const [confirmDeleteId,   setConfirmDeleteId]   = useState<string | null>(null)
   const [filters, setFilters] = useState({ studentId: 'all', dateFrom: '', dateTo: '' })
 
   const hasActiveFilters = filters.studentId !== 'all' || !!filters.dateFrom || !!filters.dateTo
@@ -48,6 +51,7 @@ export default function Sessions() {
   function handleDelete(id: string) {
     deleteSession(id)
     showToast('Session removed', 'info')
+    setConfirmDeleteId(null)
   }
 
   const subtitle = hasActiveFilters || activeMonth
@@ -176,7 +180,7 @@ export default function Sessions() {
                     <Pencil size={13} />
                   </button>
                   <button
-                    onClick={() => handleDelete(session.id)}
+                    onClick={() => setConfirmDeleteId(session.id)}
                     aria-label="Delete session"
                     className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-300 hover:text-red-400 transition-colors"
                   >
@@ -206,6 +210,21 @@ export default function Sessions() {
           />
         )}
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+        message={(() => {
+          const s = sessions.find((x) => x.id === confirmDeleteId)
+          const isBilled = s
+            ? payments.some((p) => p.studentId === s.studentId && p.date.slice(0, 7) === s.date.slice(0, 7))
+            : false
+          return isBilled
+            ? 'This session has already been billed. Deleting it will reduce the total due and may create a credit balance on the next receipt.'
+            : 'Are you sure you want to delete this session? This cannot be undone.'
+        })()}
+      />
     </div>
   )
 }

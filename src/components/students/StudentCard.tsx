@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Clock, Trash2, Pencil, History, AlertTriangle, CreditCard } from 'lucide-react'
+import { Clock, Trash2, Pencil, History, CreditCard } from 'lucide-react'
 import useStore from '@store/useStore'
+import ConfirmModal from '../shared/ConfirmModal'
 import { getCurrentTimeInTZ, format12h, convertISTtoTZ, getUTCOffsetLabel } from '@utils/timezone'
 import { formatCurrency } from '@utils/billing'
 import { useToast } from '@hooks/useToast'
@@ -24,6 +25,7 @@ export default function StudentCard({ student }: StudentCardProps) {
   const [showEdit,      setShowEdit]      = useState(false)
   const [showHistory,   setShowHistory]   = useState(false)
   const [showPayments,  setShowPayments]  = useState(false)
+  // confirmDelete is the modal open state now
 
   const hours       = getTotalHours(student.id)
   const balance     = getBalance(student.id)
@@ -31,11 +33,6 @@ export default function StudentCard({ student }: StudentCardProps) {
   const tzAbbr      = getUTCOffsetLabel(student.timezone)
 
   function handleDelete() {
-    if (!confirmDelete) {
-      setConfirmDelete(true)
-      setTimeout(() => setConfirmDelete(false), 3000)
-      return
-    }
     deleteStudent(student.id)
     showToast(`${student.name} deleted successfully`, 'success')
   }
@@ -66,23 +63,13 @@ export default function StudentCard({ student }: StudentCardProps) {
               <Pencil size={15} />
             </button>
 
-            {confirmDelete ? (
-              <div className="flex items-center gap-1 bg-red-50 rounded-xl px-2 py-1">
-                <AlertTriangle size={12} className="text-red-500" />
-                <span className="text-[10px] text-red-600 font-medium">Tap again</span>
-                <button onClick={handleDelete} className="p-0.5 rounded text-red-500 active:scale-95">
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleDelete}
-                aria-label="Delete student"
-                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-400 transition-colors"
-              >
-                <Trash2 size={15} />
-              </button>
-            )}
+            <button
+              onClick={() => setConfirmDelete(true)}
+              aria-label="Delete student"
+              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-400 transition-colors"
+            >
+              <Trash2 size={15} />
+            </button>
           </div>
         </div>
 
@@ -148,6 +135,13 @@ export default function StudentCard({ student }: StudentCardProps) {
       <Modal isOpen={showPayments} onClose={() => setShowPayments(false)} title={`${student.name} – Payments`}>
         <StudentPaymentHistory student={student} />
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        message={`Are you sure you want to delete ${student.name}? All their sessions and payments will also be removed.`}
+      />
     </>
   )
 }
