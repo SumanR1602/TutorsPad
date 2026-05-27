@@ -177,9 +177,10 @@ export function buildInvoiceHTML({
   <div class="page">
 
     <!-- Watermark -->
-    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <text x="380" y="560" text-anchor="middle"
-        transform="rotate(-35, 380, 560)"
+    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+      viewBox="0 0 760 1060" preserveAspectRatio="xMidYMid slice">
+      <text x="380" y="530" text-anchor="middle" dominant-baseline="middle"
+        transform="rotate(-35, 380, 530)"
         font-family="Inter,Arial,sans-serif" font-size="72" font-weight="700"
         fill="#4f46e5" opacity="0.10" letter-spacing="10">TutorDesk</text>
     </svg>
@@ -223,9 +224,9 @@ export function buildInvoiceHTML({
         <div class="rate-chip">${fmt(student.ratePerHour)} / ${isMonthly ? 'month' : 'hour'}</div>
       </div>
       <div class="meta-cell">
-        <div class="m-label">Billing Period</div>
-        <div class="m-name" style="font-size:12px">${periodLabel}</div>
-        <div class="m-sub" style="margin-top:3px">Ref: <strong style="color:#0f172a">${invNo}</strong></div>
+        <div class="m-label">Invoice</div>
+        <div class="m-name">${invNo}</div>
+        <div class="m-sub" style="margin-top:3px">Issued ${issued}</div>
       </div>
     </div>
 
@@ -238,7 +239,7 @@ export function buildInvoiceHTML({
 
     <!-- Sessions table -->
     <div class="tbl-wrap">
-      <div class="tbl-label">Session Breakdown</div>
+      <div class="tbl-label">Sessions This Period &nbsp;<span style="font-weight:400;color:#94a3b8">(${periodLabel})</span></div>
       <table class="items">
         <thead>
           <tr>

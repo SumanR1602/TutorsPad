@@ -64,8 +64,8 @@ export function openInvoicePDF(
 
   // ── 6. Period label ────────────────────────────────────────────────
   const periodLabel = effectiveDateFrom
-    ? `${effectiveDateFrom} → ${effectiveDateTo}`
-    : `up to ${effectiveDateTo}`
+    ? `${formatDate(effectiveDateFrom)} → ${formatDate(effectiveDateTo)}`
+    : `up to ${formatDate(effectiveDateTo)}`
 
   // ── 7. Build session rows HTML ─────────────────────────────────────
   let sessionRows = ''
