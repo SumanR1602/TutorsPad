@@ -9,6 +9,25 @@ import { DEFAULT_CURRENCY } from '@constants'
 import { applyBoldStyle } from './excelUtils'
 import type { Student, Session, Payment } from '@/types'
 
+function addSheetHeader(sheet: ExcelJS.Worksheet, sectionLabel: string, colCount: number): void {
+  const lastCol = String.fromCharCode(64 + colCount)
+  sheet.addRow(Array(colCount).fill(''))
+  sheet.mergeCells(`A1:${lastCol}1`)
+  const titleCell = sheet.getCell('A1')
+  titleCell.value = 'TUTORDESK'
+  titleCell.font = { bold: true, size: 16 }
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getRow(1).height = 32
+  sheet.addRow(Array(colCount).fill(''))
+  sheet.mergeCells(`A2:${lastCol}2`)
+  const sectionCell = sheet.getCell('A2')
+  sectionCell.value = sectionLabel
+  sectionCell.font = { bold: true, size: 13 }
+  sectionCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getRow(2).height = 24
+  sheet.addRow([])
+}
+
 async function downloadWorkbook(wb: ExcelJS.Workbook, filename: string): Promise<void> {
   const buffer = await wb.xlsx.writeBuffer()
   const blob = new Blob([buffer], {
@@ -32,6 +51,7 @@ export async function exportToExcel(
   payments: Payment[],
 ): Promise<void> {
   const currency  = student.currency ?? DEFAULT_CURRENCY
+  const isMonthly  = (student.rateType ?? 'hourly') === 'monthly'
   const monthly   = getMonthlyBreakdown(sessions, payments, student.ratePerHour, student.rateType)
   const totalHours  = sessions.reduce((sum, s) => sum + s.hours, 0)
   const totalEarned = monthly.reduce((sum, m) => sum + m.amount, 0)
@@ -45,12 +65,13 @@ export async function exportToExcel(
   // ── Sessions sheet ──────────────────────────────────────────
   const sessionsSheet = wb.addWorksheet('Sessions')
   sessionsSheet.columns = [
-    { header: 'Date',              key: 'date',   width: 14 },
-    { header: 'Type',              key: 'type',   width: 12 },
-    { header: 'Hours',             key: 'hours',  width: 8  },
-    { header: `Amount (${currency})`, key: 'amount', width: 16 },
+    { key: 'date',   width: 14 },
+    { key: 'type',   width: 12 },
+    { key: 'hours',  width: 8  },
+    { key: 'amount', width: 16 },
   ]
-  applyBoldStyle(sessionsSheet.getRow(1))
+  addSheetHeader(sessionsSheet, 'SESSIONS', 4)
+  applyBoldStyle(sessionsSheet.addRow({ date: 'Date', type: 'Type', hours: 'Hours', amount: `Amount (${currency})` }))
   sessions
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -75,10 +96,11 @@ export async function exportToExcel(
   // ── Payments sheet ──────────────────────────────────────────
   const paymentsSheet = wb.addWorksheet('Payments')
   paymentsSheet.columns = [
-    { header: 'Date',              key: 'date',   width: 14 },
-    { header: `Amount (${currency})`, key: 'amount', width: 16 },
+    { key: 'date',   width: 14 },
+    { key: 'amount', width: 16 },
   ]
-  applyBoldStyle(paymentsSheet.getRow(1))
+  addSheetHeader(paymentsSheet, 'PAYMENTS', 2)
+  applyBoldStyle(paymentsSheet.addRow({ date: 'Date', amount: `Amount (${currency})` }))
   payments
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -90,7 +112,9 @@ export async function exportToExcel(
   // ── Summary sheet ────────────────────────────────────────────
   const summarySheet = wb.addWorksheet('Summary')
   summarySheet.columns = [{ key: 'k', width: 20 }, { key: 'v', width: 28 }]
+  addSheetHeader(summarySheet, 'SUMMARY', 2)
   applyBoldStyle(summarySheet.addRow({ k: 'Field', v: 'Value' }))
+
   summarySheet.addRow({ k: 'Student',  v: student.name })
   summarySheet.addRow({ k: 'City',     v: student.city ?? '' })
   summarySheet.addRow({ k: 'Rate',     v: `${student.ratePerHour} ${currency}/${isMonthly ? 'month' : 'hr'}` })
@@ -119,16 +143,31 @@ export async function exportAllStudentsSummaryExcel(
   // ── Overview sheet ───────────────────────────────────────────
   const overviewSheet = wb.addWorksheet('Summary')
   overviewSheet.columns = [
-    { header: 'Student',      key: 'student',  width: 18 },
-    { header: 'Month',        key: 'month',    width: 18 },
-    { header: 'Hours Taught', key: 'hours',    width: 14 },
-    { header: 'Rate',         key: 'rate',     width: 12 },
-    { header: 'Earned',       key: 'earned',   width: 14 },
-    { header: 'Paid',         key: 'paid',     width: 14 },
-    { header: 'Balance',      key: 'balance',  width: 14 },
-    { header: 'Currency',     key: 'currency', width: 10 },
+    { key: 'student',  width: 18 },
+    { key: 'month',    width: 18 },
+    { key: 'hours',    width: 14 },
+    { key: 'rate',     width: 12 },
+    { key: 'earned',   width: 14 },
+    { key: 'paid',     width: 14 },
+    { key: 'balance',  width: 14 },
+    { key: 'currency', width: 10 },
   ]
-  applyBoldStyle(overviewSheet.getRow(1))
+
+  // Title row
+  overviewSheet.addRow(['TUTORDESK', '', '', '', '', '', '', ''])
+  overviewSheet.mergeCells('A1:H1')
+  const overviewTitle = overviewSheet.getCell('A1')
+  overviewTitle.value = 'TUTORDESK'
+  overviewTitle.font = { bold: true, size: 16 }
+  overviewTitle.alignment = { horizontal: 'center', vertical: 'middle' }
+  overviewSheet.getRow(1).height = 32
+
+  // Header row
+  const overviewHeader = overviewSheet.addRow({
+    student: 'Student', month: 'Month', hours: 'Hours Taught',
+    rate: 'Rate', earned: 'Earned', paid: 'Paid', balance: 'Balance', currency: 'Currency',
+  })
+  applyBoldStyle(overviewHeader)
 
   students.forEach((student) => {
     const studentSessions = sessions.filter((x) => x.studentId === student.id)
@@ -174,12 +213,35 @@ export async function exportAllStudentsSummaryExcel(
     const sheetName = student.name.replace(/[\\/:*?[\]]/g, '').slice(0, 31)
     const sheet = wb.addWorksheet(sheetName)
     sheet.columns = [
-      { header: 'Date',              key: 'date',   width: 14 },
-      { header: 'Type',              key: 'type',   width: 12 },
-      { header: 'Hours',             key: 'hours',  width: 8  },
-      { header: `Amount (${currency})`, key: 'amount', width: 16 },
+      { key: 'date',   width: 14 },
+      { key: 'type',   width: 12 },
+      { key: 'hours',  width: 8  },
+      { key: 'amount', width: 16 },
     ]
-    applyBoldStyle(sheet.getRow(1))
+
+    // App title row
+    sheet.addRow(['TUTORDESK', '', '', ''])
+    sheet.mergeCells(`A1:D1`)
+    const appTitleCell = sheet.getCell('A1')
+    appTitleCell.value = 'TUTORDESK'
+    appTitleCell.font = { bold: true, size: 16 }
+    appTitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getRow(1).height = 32
+
+    // Student name row
+    sheet.addRow([student.name, '', '', ''])
+    sheet.mergeCells(`A2:D2`)
+    const nameTitleCell = sheet.getCell('A2')
+    nameTitleCell.value = student.name
+    nameTitleCell.font = { bold: true, size: 13 }
+    nameTitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getRow(2).height = 24
+
+    sheet.addRow({})
+
+    // Header row
+    const studentHeader = sheet.addRow({ date: 'Date', type: 'Type', hours: 'Hours', amount: `Amount (${currency})` })
+    applyBoldStyle(studentHeader)
     studentSessions.forEach((s) =>
       sheet.addRow({
         date: formatDate(s.date), type: s.type, hours: s.hours,

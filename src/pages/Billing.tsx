@@ -227,7 +227,11 @@ export default function Billing() {
         {rcptModal && (() => {
           const studentPayments = payments
             .filter((p) => p.studentId === rcptModal.student.id)
-            .sort((a, b) => b.date.localeCompare(a.date))
+            .sort((a, b) =>
+              b.date !== a.date
+                ? b.date.localeCompare(a.date)
+                : (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
+            )
           return (
             <div className="space-y-3">
               <p className="text-xs text-gray-500">Select a payment to generate a receipt for:</p>

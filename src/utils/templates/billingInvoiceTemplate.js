@@ -92,7 +92,8 @@ export function buildInvoiceHTML({
     table.items thead th:first-child { border-radius: 7px 0 0 7px; }
     table.items thead th:last-child  { border-radius: 0 7px 7px 0; }
     table.items tbody tr.data-row:nth-child(even) { background: #f8fafc; }
-    table.items tbody td { padding: 5px 10px; font-size: 11.5px; color: #374151; border-bottom: 1px solid #f1f5f9; }
+    table.items tbody td { padding: 5px 10px; font-size: 11.5px; color: #374151; border-bottom: 1px solid #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    table.items tbody td.wrap { white-space: normal; word-break: break-word; }
     table.items tbody tr:last-child td { border-bottom: none; }
     table.items tfoot td {
       border-top: 2px solid #e2e8f0; padding: 7px 10px;
@@ -243,11 +244,11 @@ export function buildInvoiceHTML({
       <table class="items">
         <thead>
           <tr>
-            <th style="width:17%">Date</th>
-            <th style="width:28%">Type</th>
-            <th class="c" style="width:11%">Hrs</th>
-            <th class="r" style="width:22%">Rate</th>
-            <th class="r" style="width:22%">Amount</th>
+            <th style="width:18%">Date</th>
+            <th style="width:20%">Type</th>
+            <th class="c" style="width:10%">Hrs</th>
+            <th class="r" style="width:26%">Rate</th>
+            <th class="r" style="width:26%">Amount</th>
           </tr>
         </thead>
         <tbody>

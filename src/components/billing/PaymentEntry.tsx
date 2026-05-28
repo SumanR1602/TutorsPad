@@ -80,11 +80,17 @@ export default function PaymentEntry({ onClose }: PaymentEntryProps) {
       </div>
 
       <div>
-        <label className="label">Note (optional)</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="label mb-0">Note (optional)</label>
+          <span className={`text-xs ${form.note.length > 130 ? 'text-amber-500' : 'text-gray-400'}`}>
+            {form.note.length}/150
+          </span>
+        </div>
         <input
           className="input"
-          placeholder="e.g. UPI payment"
+          placeholder="e.g. UPI, Cash"
           value={form.note}
+          maxLength={150}
           onChange={(e) => setForm({ ...form, note: e.target.value })}
         />
       </div>

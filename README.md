@@ -1,242 +1,150 @@
+<div align="center">
+
 # TutorDesk
 
-> A mobile-first Progressive Web App for private tutors — manage students, log sessions, track payments, and generate invoices and receipts. Works fully offline; all data lives in the browser.
+**A personal tutor management app — built for independent educators who teach across time zones.**
+
+Manage students, log sessions, track billing, and generate invoices and receipts.
+Everything runs in your browser. No account. No server. No data leaves your device.
+
+[![Live App](https://img.shields.io/badge/Live_App-TutorDesk-4F46E5?style=for-the-badge)](https://tutordesk.vercel.app)
+[![Version](https://img.shields.io/badge/version-1.0.0-0F172A?style=for-the-badge)](https://github.com/SumanR1602/TutorDesk/releases)
+[![License](https://img.shields.io/badge/license-MIT-10B981?style=for-the-badge)](./LICENSE)
+[![PWA](https://img.shields.io/badge/PWA-offline_ready-F59E0B?style=for-the-badge)](#)
+
+</div>
 
 ---
 
-## Table of Contents
+## What is TutorDesk?
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Available Scripts](#available-scripts)
-- [Project Structure](#project-structure)
-- [Data & Privacy](#data--privacy)
-- [PWA & Offline Support](#pwa--offline-support)
+TutorDesk is a Progressive Web App (PWA) built specifically for tutors who teach students in different countries and time zones. It replaces scattered spreadsheets and manual calculations with one clean tool that works completely offline after the first load.
 
 ---
 
 ## Features
 
-### Students
-- Add students with name, city, timezone, rate type (hourly / monthly), currency, and avatar colour
-- Auto-detect timezone from city name (100+ cities supported)
-- Set a scheduled class time per student for in-app reminders
-- Edit and delete students — cascades to sessions and payments
-- Live local time per student card with DST awareness
-- Search and filter by name or city
+### 🧑‍🎓 Students
+- Add students with name, city, timezone, hourly or monthly rate, and avatar color
+- Auto-detects timezone from city name — 100+ cities supported
+- Live local time on each student card
+- Set a scheduled class time per student for reminders
 
-### Sessions
-- Log sessions with student, date, duration (0.5–3h), type (Regular / Extra), and an optional note
-- Month tab strip — filter sessions to a specific month in one tap
-- Advanced filter by student and date range
-- Warning shown when editing a session that has already been billed
-- Teaching streak tracker on the Dashboard
+### 📚 Sessions
+- Log Regular or Extra sessions with date, duration (0.5–3h), and optional notes
+- Filter sessions by month, student, or custom date range
+- Teaching streak tracker on the dashboard
 
-### Billing
-- Per-student billing: hourly (hours × rate) or monthly flat fee
+### 💰 Billing
 - Monthly breakdown per student — earned, paid, and pending balance
-- Record, edit, and delete payments with date and optional reference note
-- **PDF Invoice** — printable invoice over a custom date range; includes session table, payments received, and balance due
-- **PDF Receipt** — per-payment receipt with accurate inclusive period label, session breakdown, carry-forward balance, and credit / balance due
-- Export per-student Excel (.xlsx) with Sessions, Payments, and Summary sheets
-- Export all-students summary Excel with an overview sheet
+- Record payments with date, amount, and reference note
+- Supports hourly and monthly flat-fee billing
 
-### Timezone Converter
-- Enter any IST time and instantly see every student's local time
-- Warns when converted time falls outside 6 AM – 10 PM in the student's timezone
-- One-tap reset to current IST time
+### 🧾 Invoices & Receipts
+- Generate professional PDF invoices for any date range with one tap
+- Per-payment receipts with session breakdown and carry-forward balance
+- Export per-student or all-students data as Excel (.xlsx)
 
-### Settings & Reminders
-- Teacher name — used on all generated invoices and receipts
-- Light / Dark / System theme toggle
-- Daily reminder — browser push notification at a configurable time
-- Per-student class reminders — in-app banner at the student's scheduled class time
-- Full data backup export as Excel (Students, Sessions, Payments, Settings)
-- Installable as a PWA on Android and iOS home screens
+### 🌏 Timezone Converter
+- Type any IST time → instantly see every student's local time
+- Warns when a time falls outside 6 AM – 10 PM for a student (⚠ odd hours)
+- Live IST clock, resets to current time in one tap
 
----
+### 🔔 Reminders
+- Daily reminder notification at your configured time
+- Per-student class reminders at their scheduled time — fires in-app and as a push notification
 
-## Tech Stack
-
-| Layer | Library / Tool | Version |
-|---|---|---|
-| UI Framework | React + TypeScript | 18.x |
-| Build Tool | Vite | 5.x |
-| State / Persistence | Zustand with `persist` middleware | 4.x |
-| Styling | Tailwind CSS | 3.x |
-| Routing | React Router | v6 |
-| Icons | Lucide React | latest |
-| PDF Generation | html2pdf.js (bundled locally) | 0.10.1 |
-| Excel Exports | ExcelJS | 4.x |
-| PWA | vite-plugin-pwa (Workbox `autoUpdate`) | 0.20.x |
+### 📴 Fully Offline
+- Works with zero internet after the first load
+- PDFs generate offline — no internet needed
 
 ---
 
-## Getting Started
+## Getting Started (Users)
 
-### Prerequisites
+No installation needed. Open the app and install it to your home screen like a native app.
 
-- [Node.js](https://nodejs.org/) v18 or later
-- npm v9 or later
+🔗 **[Open TutorDesk →](https://tutordesk.vercel.app)**
 
-### Installation
+| Platform | Steps |
+|---|---|
+| Android | Chrome → ⋮ → **Add to Home Screen** |
+| iPhone | Safari → Share → **Add to Home Screen** |
+| Desktop | Click the **install icon** in the address bar |
+
+> **Privacy:** All your data is stored locally in your browser. Nothing is sent to any server.
+> Use **Settings → Export backup** regularly — clearing browser data will erase your app data.
+
+---
+
+## For Developers
+
+### Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | React 18 + TypeScript |
+| Build tool | Vite 5 |
+| State & persistence | Zustand + localStorage |
+| Styling | Tailwind CSS — light / dark / system |
+| Routing | React Router v6 |
+| Icons | Lucide React |
+| PDF generation | html2pdf.js (bundled — works offline) |
+| Excel export | ExcelJS |
+| PWA | vite-plugin-pwa (Workbox autoUpdate) |
+
+### Local Setup
+
+**Prerequisites:** Node.js v18+, npm v9+
 
 ```bash
-# Clone the repository
-git clone git@github-personal:SumanR1602/TutorDesk.git
+git clone https://github.com/SumanR1602/TutorDesk.git
 cd TutorDesk
-
-# Install dependencies
 npm install
-```
-
-### Running in Development
-
-```bash
 npm run dev
 ```
 
-Opens the app at `http://localhost:5173`. Hot module replacement is enabled — changes reflect instantly.
+App runs at `http://localhost:5173` with hot module replacement.
 
-To test on a phone on the same network:
-
-```bash
-# Find your local IP
-ipconfig   # Windows
-
-# Open on your phone
-http://<YOUR_LOCAL_IP>:5173
-```
-
-### Building for Production
+### Build
 
 ```bash
-npm run build
+npm run build       # production build → dist/
+npm run preview     # preview the build at localhost:4173
 ```
 
-Output is written to `dist/`. The build includes:
-- Minified JS and CSS
-- PWA service worker (`dist/sw.js`) generated by Workbox
-- Pre-cached assets including `html2pdf.bundle.min.js` for offline PDF generation
-
-### Previewing the Production Build
-
-```bash
-npm run preview
-```
-
-Serves the `dist/` folder at `http://localhost:4173`.
-
-### Mobile Preview with Network Access
-
-```bash
-npm run mobile
-```
-
-Builds and serves the production build on all network interfaces at port 4173 — accessible from any device on the same network.
-
----
-
-## Available Scripts
-
-| Script | Description |
-|---|---|
-| `npm run dev` | Start Vite dev server with HMR |
-| `npm run build` | Production build to `dist/` |
-| `npm run preview` | Serve production build locally |
-| `npm run mobile` | Build + serve on LAN (port 4173) |
-
----
-
-## Project Structure
+### Project Structure
 
 ```
-TutorDesk/
-├── public/
-│   ├── html2pdf.bundle.min.js   # Bundled PDF library (offline support)
-│   └── icons/                   # PWA icons
-├── src/
-│   ├── assets/
-│   ├── components/
-│   │   ├── billing/
-│   │   │   ├── EditPaymentForm.tsx
-│   │   │   └── PaymentEntry.tsx
-│   │   ├── sessions/
-│   │   │   ├── FilterPanel.tsx
-│   │   │   └── SessionForm.tsx       # Unified log/edit session form
-│   │   ├── shared/
-│   │   │   ├── BottomNav.tsx
-│   │   │   ├── Header.tsx
-│   │   │   ├── Modal.tsx
-│   │   │   ├── OnboardingModal.tsx
-│   │   │   ├── PendingSessionBanner.tsx
-│   │   │   ├── StatsChart.tsx
-│   │   │   ├── TimePicker12h.tsx
-│   │   │   └── Toast.tsx
-│   │   ├── students/
-│   │   │   ├── StudentCard.tsx
-│   │   │   ├── StudentForm.tsx       # Unified add/edit student form
-│   │   │   ├── StudentPaymentHistory.tsx
-│   │   │   └── StudentSessionHistory.tsx
-│   │   └── timezone/
-│   │       └── TimezoneConverter.tsx
-│   ├── constants/
-│   │   └── index.ts
-│   ├── hooks/
-│   │   └── useToast.tsx
-│   ├── pages/
-│   │   ├── Billing.tsx
-│   │   ├── Dashboard.tsx
-│   │   ├── Sessions.tsx
-│   │   ├── Settings.tsx
-│   │   └── Students.tsx
-│   ├── store/
-│   │   └── useStore.ts              # Zustand store — all state and actions
-│   ├── types/
-│   │   └── index.ts                 # Shared TypeScript types
-│   ├── utils/
-│   │   ├── billing.ts               # Core calculations + openPDFWindow
-│   │   ├── billingExcel.ts          # Excel export
-│   │   ├── billingInvoice.ts        # PDF invoice generator
-│   │   ├── billingReceipt.ts        # PDF receipt generator
-│   │   ├── excelUtils.ts            # Shared ExcelJS helpers
-│   │   ├── notifications.ts         # Web Notifications + reminder schedulers
-│   │   ├── stats.ts                 # Streak and stat calculations
-│   │   ├── storage.ts               # Full backup export
-│   │   ├── timezone.ts              # Timezone helpers + city map
-│   │   └── templates/
-│   │       ├── billingInvoiceTemplate.js
-│   │       └── receiptTemplate.js
-│   ├── App.tsx
-│   ├── index.css
-│   └── main.tsx
-├── index.html
-├── package.json
-├── postcss.config.js
-├── tailwind.config.js
-├── tsconfig.json
-├── tsconfig.node.json
-└── vite.config.ts
+src/
+├── components/       # UI components (billing, sessions, students, shared, timezone)
+├── pages/            # Dashboard, Students, Sessions, Billing, Settings
+├── store/            # Zustand store — all state, actions, selectors
+├── utils/            # Billing logic, PDF templates, Excel exports, timezone helpers
+├── types/            # Shared TypeScript interfaces
+└── constants/        # Colors, currencies, app-wide defaults
 ```
 
 ---
 
-## Data & Privacy
+## Deploying
 
-All data is stored locally in the browser's `localStorage` under the key `tutordesk-store`. No data is ever sent to a server or third party.
+TutorDesk is a fully static PWA — no server or environment variables required.
 
-**Recommended:** use **Settings → Export backup** regularly to save an offline Excel copy of all your data.
+1. Push to GitHub
+2. Import repo at [vercel.com](https://vercel.com) → **Add New Project**
+3. Vercel auto-detects Vite — just click **Deploy**
+
+Every push to `main` deploys automatically.
 
 ---
 
-## PWA & Offline Support
+## License
 
-TutorDesk is a fully installable PWA:
+MIT © [Reguri Suman](https://github.com/SumanR1602/TutorDesk)
 
-- Service worker (Workbox `autoUpdate`) pre-caches all assets on first load
-- `html2pdf.bundle.min.js` is bundled in `public/` and pre-cached — PDF generation works offline
-- On Android: open in Chrome → **Add to Home Screen**
-- On iOS: open in Safari → Share → **Add to Home Screen**
+---
 
-
+<div align="center">
+  <sub>Built for tutors, by a tutor · v1.0.0</sub>
+</div>

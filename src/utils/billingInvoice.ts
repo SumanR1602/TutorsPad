@@ -20,8 +20,8 @@ export function openInvoicePDF(
   const isMonthly   = (student.rateType ?? 'hourly') === 'monthly'
   const formatValue = (n: number) => formatCurrency(n, currency)
   const today       = new Date()
-  const todayIso    = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
-  const issued      = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+  const todayIso    = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(today)
+  const issued      = today.toLocaleDateString('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'long', year: 'numeric' })
   const invNo       = `INV-${todayIso.replace(/-/g,'')}-${student.name.slice(0,3).toUpperCase()}`
 
   const dayAfter = (iso: string) => {

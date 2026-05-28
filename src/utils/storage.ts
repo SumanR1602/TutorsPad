@@ -7,7 +7,38 @@ import ExcelJS from 'exceljs'
 import useStore from '@store/useStore'
 import { applyBoldStyle } from './excelUtils'
 import { DEFAULT_CURRENCY } from '@constants'
+import { TIMEZONE_OPTIONS } from './timezone'
 import type { Student, Session, Payment, Settings } from '@/types'
+
+function tzLabel(ianaValue: string): string {
+  return TIMEZONE_OPTIONS.find((o) => o.value === ianaValue)?.label ?? ianaValue
+}
+
+function addSheetHeader(
+  sheet: ExcelJS.Worksheet,
+  sectionLabel: string,
+  colCount: number,
+): void {
+  const lastCol = String.fromCharCode(64 + colCount) // A=1, B=2, ...
+
+  sheet.addRow(Array(colCount).fill(''))
+  sheet.mergeCells(`A1:${lastCol}1`)
+  const titleCell = sheet.getCell('A1')
+  titleCell.value = 'TUTORDESK'
+  titleCell.font = { bold: true, size: 16 }
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getRow(1).height = 32
+
+  sheet.addRow(Array(colCount).fill(''))
+  sheet.mergeCells(`A2:${lastCol}2`)
+  const sectionCell = sheet.getCell('A2')
+  sectionCell.value = sectionLabel
+  sectionCell.font = { bold: true, size: 13 }
+  sectionCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getRow(2).height = 24
+
+  sheet.addRow([])
+}
 
 // ── JSON backup ───────────────────────────────────────────────────────────────
 
@@ -88,79 +119,86 @@ export async function exportAllData(): Promise<void> {
   wb.creator = 'TutorDesk'
   wb.created = new Date()
 
-  // Students sheet
+  // ── Students sheet ──────────────────────────────────────────
   const studentsSheet = wb.addWorksheet('Students')
   studentsSheet.columns = [
-    { header: 'Name',           key: 'name',      width: 18 },
-    { header: 'City',           key: 'city',      width: 16 },
-    { header: 'Timezone',       key: 'tz',        width: 22 },
-    { header: 'Rate',           key: 'rate',      width: 10 },
-    { header: 'Rate Type',      key: 'rateType',  width: 12 },
-    { header: 'Currency',       key: 'currency',  width: 10 },
-    { header: 'Scheduled Time', key: 'scheduled', width: 16 },
-    { header: 'Added On',       key: 'added',     width: 14 },
+    { key: 'name',      width: 18 },
+    { key: 'city',      width: 16 },
+    { key: 'tz',        width: 30 },
+    { key: 'rate',      width: 10 },
+    { key: 'rateType',  width: 12 },
+    { key: 'currency',  width: 10 },
+    { key: 'scheduled', width: 16 },
+    { key: 'added',     width: 14 },
   ]
-  applyBoldStyle(studentsSheet.getRow(1))
+  addSheetHeader(studentsSheet, 'STUDENTS', 8)
+  applyBoldStyle(studentsSheet.addRow({
+    name: 'Name', city: 'City', tz: 'Timezone',
+    rate: 'Rate', rateType: 'Rate Type', currency: 'Currency',
+    scheduled: 'Scheduled Time', added: 'Enrolled Since',
+  }))
   students.forEach((s: Student) =>
     studentsSheet.addRow({
-      name: s.name, city: s.city ?? '', tz: s.timezone ?? '',
+      name: s.name, city: s.city ?? '', tz: tzLabel(s.timezone ?? ''),
       rate: s.ratePerHour, rateType: s.rateType ?? 'hourly',
       currency: s.currency ?? DEFAULT_CURRENCY, scheduled: s.scheduledTime ?? '',
       added: s.createdAt ? s.createdAt.slice(0, 10) : '',
     }),
   )
 
-  // Sessions sheet
+  // ── Sessions sheet ──────────────────────────────────────────
   const sessionsSheet = wb.addWorksheet('Sessions')
   sessionsSheet.columns = [
-    { header: 'Student', key: 'student', width: 18 },
-    { header: 'Date',    key: 'date',    width: 14 },
-    { header: 'Hours',   key: 'hours',   width: 8  },
-    { header: 'Type',    key: 'type',    width: 10 },
-    { header: 'Note',    key: 'note',    width: 30 },
+    { key: 'student', width: 18 },
+    { key: 'date',    width: 14 },
+    { key: 'hours',   width: 8  },
+    { key: 'type',    width: 10 },
+    { key: 'note',    width: 30 },
   ]
-  applyBoldStyle(sessionsSheet.getRow(1))
+  addSheetHeader(sessionsSheet, 'SESSIONS', 5)
+  applyBoldStyle(sessionsSheet.addRow({
+    student: 'Student', date: 'Date', hours: 'Hours', type: 'Type', note: 'Note',
+  }))
   sessions
     .slice()
     .sort((a: Session, b: Session) => b.date.localeCompare(a.date))
     .forEach((s: Session) =>
       sessionsSheet.addRow({
         student: studentMap[s.studentId] ?? '',
-        date: s.date,
-        hours: s.hours,
-        type: s.type,
-        note: s.note ?? '',
+        date: s.date, hours: s.hours, type: s.type, note: s.note ?? '',
       }),
     )
 
-  // Payments sheet
+  // ── Payments sheet ──────────────────────────────────────────
   const paymentsSheet = wb.addWorksheet('Payments')
   paymentsSheet.columns = [
-    { header: 'Student', key: 'student', width: 18 },
-    { header: 'Date',    key: 'date',    width: 14 },
-    { header: 'Amount',  key: 'amount',  width: 14 },
-    { header: 'Note',    key: 'note',    width: 30 },
+    { key: 'student', width: 18 },
+    { key: 'date',    width: 14 },
+    { key: 'amount',  width: 14 },
+    { key: 'note',    width: 30 },
   ]
-  applyBoldStyle(paymentsSheet.getRow(1))
+  addSheetHeader(paymentsSheet, 'PAYMENTS', 4)
+  applyBoldStyle(paymentsSheet.addRow({
+    student: 'Student', date: 'Date', amount: 'Amount', note: 'Note',
+  }))
   payments
     .slice()
     .sort((a: Payment, b: Payment) => b.date.localeCompare(a.date))
     .forEach((p: Payment) =>
       paymentsSheet.addRow({
         student: studentMap[p.studentId] ?? '',
-        date: p.date,
-        amount: p.amount,
-        note: p.note ?? '',
+        date: p.date, amount: p.amount, note: p.note ?? '',
       }),
     )
 
-  // Settings sheet
+  // ── Settings sheet ──────────────────────────────────────────
   const settingsSheet = wb.addWorksheet('Settings')
   settingsSheet.columns = [
-    { header: 'Key',   key: 'k', width: 22 },
-    { header: 'Value', key: 'v', width: 30 },
+    { key: 'k', width: 22 },
+    { key: 'v', width: 30 },
   ]
-  applyBoldStyle(settingsSheet.getRow(1))
+  addSheetHeader(settingsSheet, 'SETTINGS', 2)
+  applyBoldStyle(settingsSheet.addRow({ k: 'Key', v: 'Value' }))
   const s: Settings = settings
   settingsSheet.addRow({ k: 'Teacher Name',        v: s.teacherName ?? '' })
   settingsSheet.addRow({ k: 'Daily Reminder Time', v: s.dailyReminderTime ?? '' })

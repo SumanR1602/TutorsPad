@@ -31,13 +31,23 @@ export default function OnboardingModal() {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  function validateName(name: string): string | null {
+    const t = name.trim()
+    if (t.length < 3) return 'Name must be at least 3 characters.'
+    if (t.length > 50) return 'Name must be 50 characters or fewer.'
+    if (/[^a-zA-Z\u0900-\u097F .'\-]/.test(t)) return 'Name can only contain letters, spaces, dots, hyphens or apostrophes.'
+    if (!/[a-zA-Z\u0900-\u097F]/.test(t[0])) return 'Name must start with a letter.'
+    if (!/[a-zA-Z\u0900-\u097F]/.test(t[t.length - 1])) return 'Name must end with a letter.'
+    if (/[ .'\-]{2,}/.test(t)) return 'Name cannot have consecutive spaces or special characters.'
+    if ((t.match(/[a-zA-Z\u0900-\u097F]/g) ?? []).length < 3) return 'Name must contain at least 3 letters.'
+    return null
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) {
-      setError('Please enter your name to continue.')
-      return
-    }
+    const err = validateName(trimmed)
+    if (err) { setError(err); return }
     updateSettings({ teacherName: trimmed, onboardingCompleted: true })
   }
 
@@ -71,6 +81,7 @@ export default function OnboardingModal() {
               onChange={(e) => { setName(e.target.value); setError('') }}
               placeholder="e.g. Riya Sharma"
               autoFocus
+              maxLength={50}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-400"
             />
             {error && <p className="mt-2 text-xs text-red-500">{error}</p>}

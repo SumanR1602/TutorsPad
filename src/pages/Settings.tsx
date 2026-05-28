@@ -48,9 +48,23 @@ export default function Settings() {
     local.teacherName       !== settings.teacherName ||
     local.dailyReminderTime !== settings.dailyReminderTime
 
+  function validateTeacherName(name: string): string | null {
+    const t = name.trim()
+    if (t.length < 3) return 'Name must be at least 3 characters.'
+    if (t.length > 50) return 'Name must be 50 characters or fewer.'
+    if (/[^a-zA-Z\u0900-\u097F .'\-]/.test(t)) return 'Name can only contain letters, spaces, dots, hyphens or apostrophes.'
+    if (!/[a-zA-Z\u0900-\u097F]/.test(t[0])) return 'Name must start with a letter.'
+    if (!/[a-zA-Z\u0900-\u097F]/.test(t[t.length - 1])) return 'Name must end with a letter.'
+    if (/[ .'\-]{2,}/.test(t)) return 'Name cannot have consecutive spaces or special characters.'
+    if ((t.match(/[a-zA-Z\u0900-\u097F]/g) ?? []).length < 3) return 'Name must contain at least 3 letters.'
+    return null
+  }
+
   function handleSave() {
+    const err = validateTeacherName(local.teacherName)
+    if (err) { showToast(err, 'error'); return }
     updateSettings({
-      teacherName:       local.teacherName,
+      teacherName:       local.teacherName.trim(),
       dailyReminderTime: local.dailyReminderTime,
     })
     showToast('Settings saved', 'success')
@@ -103,7 +117,22 @@ export default function Settings() {
               value={local.teacherName}
               onChange={(e) => setLocal({ ...local, teacherName: e.target.value })}
               placeholder="Your name"
+              maxLength={50}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Timezone</label>
+              <div className="input bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-default select-none">
+                IST (Asia/Kolkata)
+              </div>
+            </div>
+            <div>
+              <label className="label">Currency</label>
+              <div className="input bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-default select-none">
+                Indian Rupee (₹)
+              </div>
+            </div>
           </div>
         </div>
 

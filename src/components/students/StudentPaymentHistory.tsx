@@ -24,7 +24,11 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   const [editPayment,      setEditPayment]      = useState<Payment | null>(null)
   const [confirmDeleteId,  setConfirmDeleteId]  = useState<string | null>(null)
 
-  const payments  = getPaymentsByStudent(student.id)
+  const payments  = [...getPaymentsByStudent(student.id)].sort((a, b) =>
+    a.date !== b.date
+      ? b.date.localeCompare(a.date)
+      : (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
+  )
   const totalPaid = getTotalPaid(student.id)
   const balance   = getBalance(student.id)
 
