@@ -157,12 +157,18 @@ export default function SessionForm({
 
       {/* Note */}
       <div>
-        <label className="label">Note (optional)</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="label mb-0">Note (optional)</label>
+          <span className={`text-xs ${form.note.length > 130 ? 'text-amber-500' : 'text-gray-400'}`}>
+            {form.note.length}/150
+          </span>
+        </div>
         <input
           className="input"
           placeholder="e.g. Doubt session on arrays"
           value={form.note}
           onChange={(e) => setForm({ ...form, note: e.target.value })}
+          maxLength={150}
         />
       </div>
 

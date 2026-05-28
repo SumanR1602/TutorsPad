@@ -6,6 +6,7 @@
 import ExcelJS from 'exceljs'
 import useStore from '@store/useStore'
 import { applyBoldStyle } from './excelUtils'
+import { DEFAULT_CURRENCY } from '@constants'
 import type { Student, Session, Payment, Settings } from '@/types'
 
 // ── JSON backup ───────────────────────────────────────────────────────────────
@@ -104,7 +105,7 @@ export async function exportAllData(): Promise<void> {
     studentsSheet.addRow({
       name: s.name, city: s.city ?? '', tz: s.timezone ?? '',
       rate: s.ratePerHour, rateType: s.rateType ?? 'hourly',
-      currency: s.currency ?? 'INR', scheduled: s.scheduledTime ?? '',
+      currency: s.currency ?? DEFAULT_CURRENCY, scheduled: s.scheduledTime ?? '',
       added: s.createdAt ? s.createdAt.slice(0, 10) : '',
     }),
   )

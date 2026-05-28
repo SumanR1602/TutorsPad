@@ -200,7 +200,7 @@ export default function Sessions() {
       <Modal
         isOpen={!!editSession}
         onClose={() => setEditSession(null)}
-        title={`Edit – ${students.find((s) => s.id === editSession?.studentId)?.name ?? 'session'}`}
+        title={`Edit – ${students.find((s) => s.id === editSession?.studentId)?.name ?? 'session'} session`}
       >
         {editSession && (
           <SessionForm

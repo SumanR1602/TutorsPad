@@ -5,6 +5,7 @@
  */
 import ExcelJS from 'exceljs'
 import { formatDate, getMonthlyBreakdown } from './billing'
+import { DEFAULT_CURRENCY } from '@constants'
 import { applyBoldStyle } from './excelUtils'
 import type { Student, Session, Payment } from '@/types'
 
@@ -30,8 +31,7 @@ export async function exportToExcel(
   sessions: Session[],
   payments: Payment[],
 ): Promise<void> {
-  const currency  = student.currency ?? 'INR'
-  const isMonthly = (student.rateType ?? 'hourly') === 'monthly'
+  const currency  = student.currency ?? DEFAULT_CURRENCY
   const monthly   = getMonthlyBreakdown(sessions, payments, student.ratePerHour, student.rateType)
   const totalHours  = sessions.reduce((sum, s) => sum + s.hours, 0)
   const totalEarned = monthly.reduce((sum, m) => sum + m.amount, 0)
@@ -134,7 +134,7 @@ export async function exportAllStudentsSummaryExcel(
     const studentSessions = sessions.filter((x) => x.studentId === student.id)
     const studentPayments = payments.filter((x) => x.studentId === student.id)
     const monthly = getMonthlyBreakdown(studentSessions, studentPayments, student.ratePerHour, student.rateType)
-    const currency = student.currency ?? 'INR'
+    const currency = student.currency ?? DEFAULT_CURRENCY
 
     if (monthly.length === 0) {
       overviewSheet.addRow({
@@ -162,7 +162,7 @@ export async function exportAllStudentsSummaryExcel(
 
   // ── One sheet per student ────────────────────────────────────
   students.forEach((student) => {
-    const currency        = student.currency ?? 'INR'
+    const currency        = student.currency ?? DEFAULT_CURRENCY
     const studentSessions = sessions
       .filter((x) => x.studentId === student.id)
       .slice()

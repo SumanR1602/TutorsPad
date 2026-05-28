@@ -5,6 +5,7 @@
  */
 import { formatDate, formatCurrency, openPDFWindow } from './billing'
 import { buildInvoiceHTML } from './templates/billingInvoiceTemplate'
+import { DEFAULT_CURRENCY } from '@constants'
 import type { Student, Session, Payment } from '@/types'
 
 export function openInvoicePDF(
@@ -15,7 +16,7 @@ export function openInvoicePDF(
   dateFrom: string = '',
   dateTo: string = '',
 ): void {
-  const currency    = student.currency ?? 'INR'
+  const currency    = student.currency ?? DEFAULT_CURRENCY
   const isMonthly   = (student.rateType ?? 'hourly') === 'monthly'
   const formatValue = (n: number) => formatCurrency(n, currency)
   const today       = new Date()

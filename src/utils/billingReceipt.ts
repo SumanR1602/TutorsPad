@@ -5,6 +5,7 @@
  */
 import { formatDate, formatCurrency, openPDFWindow } from './billing'
 import { buildReceiptHTML } from './templates/receiptTemplate'
+import { DEFAULT_CURRENCY } from '@constants'
 import type { Student, Session, Payment } from '@/types'
 
 export function openReceiptPDF(
@@ -14,7 +15,7 @@ export function openReceiptPDF(
   payment: Payment,
   teacherName: string = 'Teacher',
 ): void {
-  const currency     = student.currency ?? 'INR'
+  const currency     = student.currency ?? DEFAULT_CURRENCY
   const isMonthly    = (student.rateType ?? 'hourly') === 'monthly'
   const formatValue  = (n: number) => formatCurrency(n, currency)
   const today        = new Date()

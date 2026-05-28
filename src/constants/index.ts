@@ -9,13 +9,7 @@ export const HOUR_OPTIONS: number[] = [0.5, 1, 1.5, 2, 2.5, 3]
 
 export const CURRENCIES: { value: string; label: string }[] = [
   { value: 'INR', label: 'INR (₹)' },
-  { value: 'USD', label: 'USD ($)' },
-  { value: 'GBP', label: 'GBP (£)' },
-  { value: 'EUR', label: 'EUR (€)' },
-  { value: 'AUD', label: 'AUD (A$)' },
-  { value: 'CAD', label: 'CAD (C$)' },
-  { value: 'SGD', label: 'SGD (S$)' },
-  { value: 'AED', label: 'AED (د.إ)' },
+  // Add more currencies here when needed
 ]
 
 export const DEFAULT_TIMEZONE = 'Asia/Kolkata'

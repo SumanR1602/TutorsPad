@@ -10,6 +10,7 @@ export interface Student {
   currency: string        // "INR" | "USD" | "GBP" etc.
   color: string           // hex e.g. "#6366f1"
   scheduledTime?: string  // "HH:mm" in IST, optional
+  label?: string           // optional batch/subject tag e.g. "Math", "Batch A"
   createdAt: string       // ISO date string
 }
 

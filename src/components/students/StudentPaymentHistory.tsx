@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import useStore from '@store/useStore'
 import { formatCurrency, formatDate } from '@utils/billing'
+import { DEFAULT_CURRENCY } from '@constants'
 import { Trash2, CreditCard, Pencil } from 'lucide-react'
 import { useToast } from '@hooks/useToast'
 import Modal from '../shared/Modal'
@@ -27,9 +28,9 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   const totalPaid = getTotalPaid(student.id)
   const balance   = getBalance(student.id)
 
-  function handleDelete(paymentId: string, paymentDate: string) {
+  function handleDelete(paymentId: string, paymentDate: string, paymentAmount: number) {
     deletePayment(paymentId)
-    showToast(`Payment on ${paymentDate} removed`, 'info')
+    showToast(`Payment of ₹${paymentAmount.toLocaleString('en-IN')} on ${paymentDate} deleted`, 'info')
     setConfirmDeleteId(null)
   }
 
@@ -54,13 +55,13 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
           <p className="text-lg font-bold text-green-700 dark:text-green-400">
-            {formatCurrency(totalPaid, student.currency ?? 'INR')}
+            {formatCurrency(totalPaid, student.currency ?? DEFAULT_CURRENCY)}
           </p>
           <p className="text-[10px] text-green-400 dark:text-green-500 mt-0.5">Total received</p>
         </div>
         <div className={`rounded-xl p-3 text-center ${balance > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
           <p className={`text-lg font-bold ${balance > 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-            {formatCurrency(Math.abs(balance), student.currency ?? 'INR')}
+            {formatCurrency(Math.abs(balance), student.currency ?? DEFAULT_CURRENCY)}
           </p>
           <p className={`text-[10px] mt-0.5 ${balance > 0 ? 'text-red-400 dark:text-red-500' : 'text-emerald-400 dark:text-emerald-500'}`}>
             {balance > 0 ? 'Still pending' : 'Fully paid'}
@@ -73,7 +74,7 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
           <div key={payment.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2.5">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                {formatCurrency(payment.amount, student.currency ?? 'INR')}
+                {formatCurrency(payment.amount, student.currency ?? DEFAULT_CURRENCY)}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">{formatDate(payment.date)}</p>
               {payment.note && <p className="text-xs text-gray-500 truncate mt-0.5">{payment.note}</p>}
@@ -114,7 +115,7 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
         onClose={() => setConfirmDeleteId(null)}
         onConfirm={() => {
           const p = payments.find((x) => x.id === confirmDeleteId)
-          if (p) handleDelete(p.id, p.date)
+          if (p) handleDelete(p.id, p.date, p.amount)
         }}
         message="Are you sure you want to delete this payment? This cannot be undone."
       />

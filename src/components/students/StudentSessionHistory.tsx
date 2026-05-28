@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import useStore from '@store/useStore'
 import { formatCurrency, formatDate } from '@utils/billing'
+import { DEFAULT_CURRENCY } from '@constants'
 import { Trash2, BookOpen } from 'lucide-react'
 import { useToast } from '@hooks/useToast'
 import ConfirmModal from '../shared/ConfirmModal'
@@ -48,7 +49,7 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
         </div>
         <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
           <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
-            {formatCurrency(totalEarned, student.currency ?? 'INR')}
+            {formatCurrency(totalEarned, student.currency ?? DEFAULT_CURRENCY)}
           </p>
           <p className="text-[10px] text-emerald-400 dark:text-emerald-500 mt-0.5">Total earned</p>
         </div>

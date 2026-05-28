@@ -133,12 +133,13 @@ export function format12h(time24: string): string {
   return `${hour}:${String(m).padStart(2, '0')} ${period}`
 }
 
-/** Get the current time in a timezone as a string. */
+/** Get the current time in a timezone as a string, with seconds. */
 export function getCurrentTimeInTZ(timezone: string): string {
   return new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hour12: true,
   }).format(new Date())
 }

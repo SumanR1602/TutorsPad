@@ -5,6 +5,7 @@ import StatsChart from '@components/shared/StatsChart'
 import useStore from '@store/useStore'
 import { formatCurrency } from '@utils/billing'
 import { calcStreak } from '@utils/stats'
+import { DEFAULT_CURRENCY } from '@constants'
 
 export default function Dashboard() {
   const students   = useStore((s) => s.students)
@@ -13,11 +14,6 @@ export default function Dashboard() {
   const settings   = useStore((s) => s.settings)
 
   const totalBalance  = students.reduce((sum, s) => sum + getBalance(s.id), 0)
-
-  // Check if all students share a single currency (safe to sum); otherwise show a note
-  const currencies = [...new Set(students.map((s) => s.currency ?? 'INR'))]
-  const singleCurrency = currencies.length === 1 ? currencies[0] : null
-  const primaryCurrency = singleCurrency ?? 'INR'
   const today         = new Date().toISOString().slice(0, 10)
   const todaySessions = sessions.filter((s) => s.date === today)
   const streak        = calcStreak(sessions)
@@ -54,12 +50,9 @@ export default function Dashboard() {
           </div>
           <div className={`card text-center py-3 ${totalBalance > 0 ? 'border-red-100 dark:border-red-900' : ''}`}>
             <p className={`text-lg font-bold ${totalBalance > 0 ? 'text-red-500' : 'text-green-500'}`}>
-              {formatCurrency(totalBalance, primaryCurrency)}
+              {formatCurrency(totalBalance, DEFAULT_CURRENCY)}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">Pending</p>
-            {!singleCurrency && (
-              <p className="text-[9px] text-gray-300 mt-0.5">mixed currencies</p>
-            )}
           </div>
         </div>
 

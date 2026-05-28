@@ -23,12 +23,13 @@ interface StudentFormState {
   currency: string
   color: string
   scheduledTime: string
+  label: string
 }
 
 const defaultForm: StudentFormState = {
   name: '', city: '', timezone: DEFAULT_TIMEZONE,
   rateType: DEFAULT_RATE_TYPE, ratePerHour: '', currency: DEFAULT_CURRENCY,
-  color: COLORS[0], scheduledTime: '',
+  color: COLORS[0], scheduledTime: '', label: '',
 }
 
 interface StudentFormProps {
@@ -36,12 +37,40 @@ interface StudentFormProps {
   onClose: () => void
 }
 
+const LETTER = /[a-zA-Z\u0900-\u097F]/
+
+function validateName(name: string): string | null {
+  const trimmed = name.trim()
+  if (trimmed.length < 3)  return 'Name must be at least 3 characters.'
+  if (trimmed.length > 50) return 'Name must be 50 characters or fewer.'
+  // Only letters, spaces, dots, hyphens, apostrophes allowed
+  if (/[^a-zA-Z\u0900-\u097F .'\\-]/.test(trimmed))
+    return 'Name can only contain letters, spaces, dots, hyphens or apostrophes.'
+  // Must start and end with a letter
+  if (!LETTER.test(trimmed[0]))
+    return 'Name must start with a letter.'
+  if (!LETTER.test(trimmed[trimmed.length - 1]))
+    return 'Name must end with a letter.'
+  // No consecutive special characters (e.g. "--", ". ", "-.")
+  if (/[ .'\\-]{2,}/.test(trimmed))
+    return 'Name cannot have consecutive spaces or special characters.'
+  // Must have at least 3 actual letters (not just 3 total chars)
+  const letterCount = (trimmed.match(/[a-zA-Z\u0900-\u097F]/g) ?? []).length
+  if (letterCount < 3)
+    return 'Name must contain at least 3 letters.'
+  return null
+}
+
 export default function StudentForm({ student, onClose }: StudentFormProps) {
   const addStudent    = useStore((s) => s.addStudent)
   const updateStudent = useStore((s) => s.updateStudent)
+  const students      = useStore((s) => s.students)
   const { showToast } = useToast()
 
   const isEdit = !!student
+
+  const [nameError,    setNameError]    = useState<string | null>(null)
+  const [dupWarning,   setDupWarning]   = useState(false)
 
   const [form, setForm] = useState<StudentFormState>(
     isEdit
@@ -54,20 +83,40 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
           currency:      student.currency ?? DEFAULT_CURRENCY,
           color:         student.color ?? COLORS[0],
           scheduledTime: student.scheduledTime ?? '',
+          label:         student.label ?? '',
         }
       : defaultForm,
   )
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.name.trim() || !form.ratePerHour) return
-    const data = { ...form, ratePerHour: parseFloat(form.ratePerHour) }
+    const trimmedName = form.name.trim()
+
+    // Name validation
+    const err = validateName(trimmedName)
+    if (err) { setNameError(err); return }
+    setNameError(null)
+
+    // Duplicate check (skip own record in edit mode)
+    const isDuplicate = students.some(
+      (s) =>
+        s.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+        (!isEdit || s.id !== student.id),
+    )
+    if (isDuplicate && !dupWarning) {
+      setDupWarning(true)
+      return
+    }
+    setDupWarning(false)
+
+    if (!form.ratePerHour) return
+    const data = { ...form, name: trimmedName, ratePerHour: parseFloat(form.ratePerHour) }
     if (isEdit) {
       updateStudent(student.id, data)
-      showToast(`${form.name} updated`, 'success')
+      showToast(`${trimmedName} updated`, 'success')
     } else {
       addStudent(data)
-      showToast(`${form.name.trim()} added`, 'success')
+      showToast(`${trimmedName} added`, 'success')
     }
     onClose()
   }
@@ -78,12 +127,41 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
       <div>
         <label className="label">Student name *</label>
         <input
-          className="input"
+          className={`input ${nameError ? 'border-red-400 focus:ring-red-400' : ''}`}
           placeholder="e.g. Shri Ram"
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) => {
+            setForm({ ...form, name: e.target.value })
+            setNameError(null)
+            setDupWarning(false)
+          }}
+          maxLength={50}
           required
         />
+        {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+        {dupWarning && !nameError && (
+          <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-3 py-2">
+            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+              A student named "{form.name.trim()}" already exists.
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              Add a label below to tell them apart, or submit again to save anyway.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Label */}
+      <div>
+        <label className="label">Label / Batch <span className="text-gray-400 font-normal">(optional)</span></label>
+        <input
+          className="input"
+          placeholder="e.g. Math, Batch A, Morning"
+          value={form.label}
+          onChange={(e) => setForm({ ...form, label: e.target.value })}
+          maxLength={30}
+        />
+        <p className="text-xs text-gray-400 mt-1">Shown as a badge on the student card to tell apart students with the same name.</p>
       </div>
 
       {/* City (with autocomplete + timezone detection) */}

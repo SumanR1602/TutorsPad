@@ -15,10 +15,10 @@ export default function TimezoneConverter() {
   const students = useStore((s) => s.students)
   const [istTime, setIstTime] = useState<string>(getNowIST)
 
-  // Tick every minute to keep "Current IST" display fresh
-  const [, setTick] = useState(0)
+  // Tick every second to keep "Current IST" display live
+  const [nowIST, setNowIST] = useState(() => getCurrentTimeInTZ(TEACHER_TZ))
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000)
+    const id = setInterval(() => setNowIST(getCurrentTimeInTZ(TEACHER_TZ)), 1_000)
     return () => clearInterval(id)
   }, [])
 
@@ -42,7 +42,7 @@ export default function TimezoneConverter() {
         </div>
         <TimePicker12h value={istTime} onChange={setIstTime} />
         <p className="text-xs text-gray-400 mt-1.5">
-          Current IST: {getCurrentTimeInTZ(TEACHER_TZ)}
+          Current IST: {nowIST}
         </p>
       </div>
 

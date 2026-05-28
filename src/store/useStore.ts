@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Student, Session, Payment, Settings } from '@/types'
-import { STORE_NAME, DEFAULT_RATE_TYPE } from '@constants'
+import { STORE_NAME, DEFAULT_RATE_TYPE, DEFAULT_CURRENCY } from '@constants'
 
 interface StoreState {
   // ── State ────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ const useStore = create<StoreState>()(
         teacherTimezone: 'Asia/Kolkata',
         dailyReminderTime: '20:00',
         reminderEnabled: false,
-        currency: 'INR',
+        currency: DEFAULT_CURRENCY,
         theme: 'system',
         onboardingCompleted: false,
       },

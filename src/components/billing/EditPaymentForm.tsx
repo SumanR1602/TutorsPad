@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Payment, Student } from '@/types'
+import { DEFAULT_CURRENCY } from '@constants'
 
 interface EditPaymentFormProps {
   payment: Payment
@@ -29,7 +30,7 @@ export default function EditPaymentForm({ payment, student, onSave, onClose }: E
         />
       </div>
       <div>
-        <label className="label">Amount ({student.currency ?? 'INR'})</label>
+        <label className="label">Amount ({student.currency ?? DEFAULT_CURRENCY})</label>
         <input
           type="number"
           className="input"
