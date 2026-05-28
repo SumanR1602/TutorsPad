@@ -211,9 +211,10 @@ export function buildReceiptHTML({
   <div class="page">
 
     <!-- Watermark -->
-    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <text x="380" y="560" text-anchor="middle"
-        transform="rotate(-35, 380, 560)"
+    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+      viewBox="0 0 760 1060" preserveAspectRatio="xMidYMid slice">
+      <text x="380" y="530" text-anchor="middle" dominant-baseline="middle"
+        transform="rotate(-35, 380, 530)"
         font-family="Inter,Arial,sans-serif" font-size="72" font-weight="700"
         fill="#15803d" opacity="0.12" letter-spacing="10">TutorDesk</text>
     </svg>

@@ -23,7 +23,7 @@ export default function PendingSessionBanner() {
           return (
             <div
               key={studentId}
-              className="flex items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-3"
+              className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-2xl px-4 py-3"
             >
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
@@ -33,7 +33,7 @@ export default function PendingSessionBanner() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-indigo-900 truncate">
+                <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-100 truncate">
                   Time to teach {student.name}!
                 </p>
                 <p className="text-xs text-indigo-500">Log today's session?</p>
@@ -50,7 +50,7 @@ export default function PendingSessionBanner() {
                 <button
                   onClick={() => dismissPendingReminder(studentId)}
                   aria-label="Dismiss reminder"
-                  className="p-1.5 rounded-xl text-indigo-400 hover:bg-indigo-100 active:scale-95 transition-transform"
+                  className="p-1.5 rounded-xl text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 active:scale-95 transition-transform"
                 >
                   <X size={14} />
                 </button>

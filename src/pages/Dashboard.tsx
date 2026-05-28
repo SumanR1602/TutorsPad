@@ -49,10 +49,10 @@ export default function Dashboard() {
             <p className="text-xs text-gray-400 mt-0.5">Students</p>
           </div>
           <div className="card text-center py-3">
-            <p className="text-2xl font-bold text-gray-800">{todaySessions.length}</p>
+            <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{todaySessions.length}</p>
             <p className="text-xs text-gray-400 mt-0.5">Today</p>
           </div>
-          <div className={`card text-center py-3 ${totalBalance > 0 ? 'border-red-100' : ''}`}>
+          <div className={`card text-center py-3 ${totalBalance > 0 ? 'border-red-100 dark:border-red-900' : ''}`}>
             <p className={`text-lg font-bold ${totalBalance > 0 ? 'text-red-500' : 'text-green-500'}`}>
               {formatCurrency(totalBalance, primaryCurrency)}
             </p>
@@ -66,7 +66,7 @@ export default function Dashboard() {
         {streak > 0 && (
           <div className="flex items-center gap-2 px-1">
             <span className="text-base">🔥</span>
-            <span className="text-sm font-semibold text-gray-800">{streak}-day streak</span>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{streak}-day streak</span>
             <span className="text-xs text-gray-400">Keep it up!</span>
           </div>
         )}
@@ -75,7 +75,7 @@ export default function Dashboard() {
           <div className="card flex items-center justify-between py-3">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">{monthLabel}</p>
-              <p className="text-sm font-semibold text-gray-800">{monthHours}h taught</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{monthHours}h taught</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400 mb-0.5">Earned</p>

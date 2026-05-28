@@ -49,7 +49,7 @@ export default function StudentCard({ student }: StudentCardProps) {
               {student.name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">{student.name}</p>
+              <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{student.name}</p>
               <p className="text-xs text-gray-400">{student.city}</p>
             </div>
           </div>
@@ -74,15 +74,15 @@ export default function StudentCard({ student }: StudentCardProps) {
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gray-50 rounded-xl p-2.5 text-center">
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5 text-center">
             <p className="text-[10px] text-gray-400 mb-0.5">Local time ({tzAbbr})</p>
-            <p className="text-xs font-semibold text-gray-800">{currentTime}</p>
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{currentTime}</p>
           </div>
-          <div className="bg-gray-50 rounded-xl p-2.5 text-center">
+          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5 text-center">
             <p className="text-[10px] text-gray-400 mb-0.5">Total hrs</p>
-            <p className="text-xs font-semibold text-gray-800">{hours.toFixed(1)}h</p>
+            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{hours.toFixed(1)}h</p>
           </div>
-          <div className={`rounded-xl p-2.5 text-center ${balance > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
+          <div className={`rounded-xl p-2.5 text-center ${balance > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
             <p className="text-[10px] text-gray-400 mb-0.5">{balance > 0 ? 'Pending' : 'Paid up'}</p>
             <p className={`text-xs font-semibold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {formatCurrency(balance, student.currency ?? 'INR')}
@@ -108,16 +108,16 @@ export default function StudentCard({ student }: StudentCardProps) {
           )}
         </div>
 
-        <div className="flex gap-2 pt-1 border-t border-gray-100">
+        <div className="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
           <button
             onClick={() => setShowHistory(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <History size={13} /> Sessions
           </button>
           <button
             onClick={() => setShowPayments(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <CreditCard size={13} /> Payments
           </button>

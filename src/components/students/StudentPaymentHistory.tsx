@@ -52,17 +52,17 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-green-50 rounded-xl p-3 text-center">
-          <p className="text-lg font-bold text-green-700">
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+          <p className="text-lg font-bold text-green-700 dark:text-green-400">
             {formatCurrency(totalPaid, student.currency ?? 'INR')}
           </p>
-          <p className="text-[10px] text-green-400 mt-0.5">Total received</p>
+          <p className="text-[10px] text-green-400 dark:text-green-500 mt-0.5">Total received</p>
         </div>
-        <div className={`rounded-xl p-3 text-center ${balance > 0 ? 'bg-red-50' : 'bg-emerald-50'}`}>
-          <p className={`text-lg font-bold ${balance > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+        <div className={`rounded-xl p-3 text-center ${balance > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+          <p className={`text-lg font-bold ${balance > 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
             {formatCurrency(Math.abs(balance), student.currency ?? 'INR')}
           </p>
-          <p className={`text-[10px] mt-0.5 ${balance > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+          <p className={`text-[10px] mt-0.5 ${balance > 0 ? 'text-red-400 dark:text-red-500' : 'text-emerald-400 dark:text-emerald-500'}`}>
             {balance > 0 ? 'Still pending' : 'Fully paid'}
           </p>
         </div>
@@ -70,9 +70,9 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
 
       <div className="space-y-2 max-h-[55vh] overflow-y-auto -mx-1 px-1">
         {payments.map((payment) => (
-          <div key={payment.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+          <div key={payment.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 rounded-xl px-3 py-2.5">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                 {formatCurrency(payment.amount, student.currency ?? 'INR')}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">{formatDate(payment.date)}</p>

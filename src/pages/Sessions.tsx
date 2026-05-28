@@ -156,7 +156,7 @@ export default function Sessions() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-800 truncate">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
                         {student?.name ?? 'Unknown'}
                       </p>
                       {session.type === 'extra' && (
@@ -171,7 +171,7 @@ export default function Sessions() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <p className="text-sm font-semibold text-gray-900 mr-1">{session.hours}h</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mr-1">{session.hours}h</p>
                   <button
                     onClick={() => setEditSession(session)}
                     aria-label="Edit session"
