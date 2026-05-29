@@ -16,7 +16,7 @@ export default function Logo({ size = 32, withName = false, className = '' }: Lo
         height={size}
         viewBox="0 0 512 512"
         xmlns="http://www.w3.org/2000/svg"
-        aria-label="TutorDesk"
+        aria-label="TutorsPad"
         role="img"
       >
         <defs>

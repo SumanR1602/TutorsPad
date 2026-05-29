@@ -183,7 +183,7 @@ export function buildInvoiceHTML({
       <text x="380" y="530" text-anchor="middle" dominant-baseline="middle"
         transform="rotate(-35, 380, 530)"
         font-family="Inter,Arial,sans-serif" font-size="72" font-weight="700"
-        fill="#4f46e5" opacity="0.10" letter-spacing="10">TutorDesk</text>
+        fill="#4f46e5" opacity="0.10" letter-spacing="10">TutorsPad</text>
     </svg>
 
     <!-- Header -->
@@ -202,7 +202,7 @@ export function buildInvoiceHTML({
             <rect x="310" y="118" width="14" height="72" rx="7" fill="rgba(255,255,255,0.6)" transform="rotate(20 317 154)"/>
             <polygon points="317,186 310,202 324,202" fill="rgba(255,255,255,0.5)" transform="rotate(20 317 154)"/>
           </svg>
-          <span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase">TutorDesk</span>
+          <span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase">TutorsPad</span>
         </div>
         <div>
           <div class="t-name">${teacherName}</div>
@@ -289,7 +289,7 @@ export function buildInvoiceHTML({
     <div class="inv-footer">
       <div class="f-left">
         <em>Please make payment at your earliest convenience.</em>
-        <span>Generated via TutorDesk &middot; ${issued}</span>
+        <span>Generated via TutorsPad &middot; ${issued}</span>
       </div>
       <div class="f-right">
         <div class="f-name">${teacherName}</div>

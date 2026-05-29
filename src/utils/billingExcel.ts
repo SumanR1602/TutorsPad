@@ -14,7 +14,7 @@ function addSheetHeader(sheet: ExcelJS.Worksheet, sectionLabel: string, colCount
   sheet.addRow(Array(colCount).fill(''))
   sheet.mergeCells(`A1:${lastCol}1`)
   const titleCell = sheet.getCell('A1')
-  titleCell.value = 'TUTORDESK'
+  titleCell.value = 'TUTORSPAD'
   titleCell.font = { bold: true, size: 16 }
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getRow(1).height = 32
@@ -59,7 +59,7 @@ export async function exportToExcel(
   const balance     = totalEarned - totalPaid
 
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'TutorDesk'
+  wb.creator = 'TutorsPad'
   wb.created = new Date()
 
   // ── Sessions sheet ──────────────────────────────────────────
@@ -137,7 +137,7 @@ export async function exportAllStudentsSummaryExcel(
   payments: Payment[],
 ): Promise<void> {
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'TutorDesk'
+  wb.creator = 'TutorsPad'
   wb.created = new Date()
 
   // ── Overview sheet ───────────────────────────────────────────
@@ -154,10 +154,10 @@ export async function exportAllStudentsSummaryExcel(
   ]
 
   // Title row
-  overviewSheet.addRow(['TUTORDESK', '', '', '', '', '', '', ''])
+  overviewSheet.addRow(['TUTORSPAD', '', '', '', '', '', '', ''])
   overviewSheet.mergeCells('A1:H1')
   const overviewTitle = overviewSheet.getCell('A1')
-  overviewTitle.value = 'TUTORDESK'
+  overviewTitle.value = 'TUTORSPAD'
   overviewTitle.font = { bold: true, size: 16 }
   overviewTitle.alignment = { horizontal: 'center', vertical: 'middle' }
   overviewSheet.getRow(1).height = 32
@@ -220,10 +220,10 @@ export async function exportAllStudentsSummaryExcel(
     ]
 
     // App title row
-    sheet.addRow(['TUTORDESK', '', '', ''])
+    sheet.addRow(['TUTORSPAD', '', '', ''])
     sheet.mergeCells(`A1:D1`)
     const appTitleCell = sheet.getCell('A1')
-    appTitleCell.value = 'TUTORDESK'
+    appTitleCell.value = 'TUTORSPAD'
     appTitleCell.font = { bold: true, size: 16 }
     appTitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getRow(1).height = 32
@@ -266,5 +266,5 @@ export async function exportAllStudentsSummaryExcel(
     applyBoldStyle(sheet.addRow({ date: 'BALANCE DUE',  type: '', hours: null, amount: totalEarned - totalPaid }))
   })
 
-  await downloadWorkbook(wb, `tutordesk-summary-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  await downloadWorkbook(wb, `tutorspad-summary-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }

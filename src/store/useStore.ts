@@ -186,7 +186,7 @@ const useStore = create<StoreState>()(
         })),
     }),
     {
-      name: STORE_NAME,  // Fix: was 'classmate-pro-store', now 'tutordesk-store'
+      name: STORE_NAME,
       partialize: (state) => ({
         students: state.students,
         sessions: state.sessions,

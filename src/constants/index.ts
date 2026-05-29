@@ -15,5 +15,5 @@ export const CURRENCIES: { value: string; label: string }[] = [
 export const DEFAULT_TIMEZONE = 'Asia/Kolkata'
 export const DEFAULT_CURRENCY = 'INR'
 export const DEFAULT_RATE_TYPE = 'hourly' as const
-export const STORE_NAME = 'tutordesk-store'
+export const STORE_NAME = 'tutorspad-store'
 export const BOTTOM_NAV_HEIGHT_PX = 64

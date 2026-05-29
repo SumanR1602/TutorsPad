@@ -46,7 +46,7 @@ export function startReminderScheduler(timeStr: string, message: string): () => 
     // fire only at or after target, within a 2-minute catch-up window
     if (totalNow >= totalTarget && totalNow <= totalTarget + 2) {
       sessionStorage.setItem(storageKey, '1')
-      void showNotification('TutorDesk – Daily Reminder', message)
+      void showNotification('TutorsPad – Daily Reminder', message)
     }
   }
 
@@ -95,7 +95,7 @@ export function startPerStudentReminders(
         onReminder(student.id)
         if (Notification.permission === 'granted') {
           void showNotification(
-            `TutorDesk – Class Reminder`,
+            `TutorsPad – Class Reminder`,
             `Time for ${student.name}'s class!`,
           )
         }

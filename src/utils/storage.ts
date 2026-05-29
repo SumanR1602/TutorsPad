@@ -24,7 +24,7 @@ function addSheetHeader(
   sheet.addRow(Array(colCount).fill(''))
   sheet.mergeCells(`A1:${lastCol}1`)
   const titleCell = sheet.getCell('A1')
-  titleCell.value = 'TUTORDESK'
+  titleCell.value = 'TUTORSPAD'
   titleCell.font = { bold: true, size: 16 }
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getRow(1).height = 32
@@ -63,7 +63,7 @@ export function exportBackupJSON(): void {
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `tutordesk-backup-${new Date().toISOString().slice(0, 10)}.json`
+  a.download = `tutorspad-backup-${new Date().toISOString().slice(0, 10)}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -116,7 +116,7 @@ export async function exportAllData(): Promise<void> {
   )
 
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'TutorDesk'
+  wb.creator = 'TutorsPad'
   wb.created = new Date()
 
   // ── Students sheet ──────────────────────────────────────────
@@ -213,7 +213,7 @@ export async function exportAllData(): Promise<void> {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `tutordesk-backup-${new Date().toISOString().slice(0, 10)}.xlsx`
+  a.download = `tutorspad-backup-${new Date().toISOString().slice(0, 10)}.xlsx`
   a.click()
   URL.revokeObjectURL(url)
 }
