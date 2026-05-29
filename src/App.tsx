@@ -39,7 +39,8 @@ export default function App() {
   useEffect(() => {
     globalCleanupRef.current?.()
     globalCleanupRef.current = null
-    if (settings.reminderEnabled && settings.dailyReminderTime) {
+    const permissionGranted = 'Notification' in window && Notification.permission === 'granted'
+    if (permissionGranted && settings.dailyReminderTime) {
       globalCleanupRef.current = startReminderScheduler(
         settings.dailyReminderTime,
         "Don't forget to log today's sessions! 📚",

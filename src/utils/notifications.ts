@@ -11,10 +11,19 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return permission === 'granted'
 }
 
-export function showNotification(title: string, body: string): Notification | undefined {
-  if (Notification.permission === 'granted') {
-    return new Notification(title, { body, icon: '/icon-192.png' })
+export async function showNotification(title: string, body: string): Promise<void> {
+  if (Notification.permission !== 'granted') return
+  // Prefer SW notification (works when app is backgrounded on Android PWA)
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      await reg.showNotification(title, { body, icon: '/icon-192.png' })
+      return
+    } catch {
+      // fall through to page-level notification
+    }
   }
+  new Notification(title, { body, icon: '/icon-192.png' })
 }
 
 /**
@@ -25,17 +34,19 @@ export function startReminderScheduler(timeStr: string, message: string): () => 
   if (!('Notification' in window) || Notification.permission !== 'granted') return () => {}
 
   const [targetH, targetM] = timeStr.split(':').map(Number)
-  let lastFiredDate: string | null = null
 
   function checkAndFire() {
     const now = new Date()
     const todayKey = now.toDateString()
-    const h = now.getHours()
-    const m = now.getMinutes()
+    const storageKey = `daily-reminder-${todayKey}`
+    if (sessionStorage.getItem(storageKey)) return
 
-    if (h === targetH && m === targetM && lastFiredDate !== todayKey) {
-      lastFiredDate = todayKey
-      showNotification('TutorDesk – Daily Reminder', message)
+    const totalNow    = now.getHours() * 60 + now.getMinutes()
+    const totalTarget = targetH * 60 + targetM
+    // fire only at or after target, within a 2-minute catch-up window
+    if (totalNow >= totalTarget && totalNow <= totalTarget + 2) {
+      sessionStorage.setItem(storageKey, '1')
+      void showNotification('TutorDesk – Daily Reminder', message)
     }
   }
 
@@ -43,7 +54,7 @@ export function startReminderScheduler(timeStr: string, message: string): () => 
     if (document.visibilityState === 'visible') checkAndFire()
   }
 
-  const interval = setInterval(checkAndFire, 30000)
+  const interval = setInterval(checkAndFire, 15000)
   document.addEventListener('visibilitychange', onVisible)
   checkAndFire()
 
@@ -76,11 +87,14 @@ export function startPerStudentReminders(
       const [targetH, targetM] = student.scheduledTime.split(':').map(Number)
       const storageKey = `reminder-${student.id}-${todayKey}`
 
-      if (h === targetH && m === targetM && !sessionStorage.getItem(storageKey)) {
+      const totalNow    = h * 60 + m
+      const totalTarget = targetH * 60 + targetM
+      // fire only at or after target, within a 2-minute catch-up window
+      if (totalNow >= totalTarget && totalNow <= totalTarget + 2 && !sessionStorage.getItem(storageKey)) {
         sessionStorage.setItem(storageKey, '1')
         onReminder(student.id)
         if (Notification.permission === 'granted') {
-          showNotification(
+          void showNotification(
             `TutorDesk – Class Reminder`,
             `Time for ${student.name}'s class!`,
           )
@@ -93,7 +107,7 @@ export function startPerStudentReminders(
     if (document.visibilityState === 'visible') checkAndFire()
   }
 
-  const interval = setInterval(checkAndFire, 30000)
+  const interval = setInterval(checkAndFire, 15000)
   document.addEventListener('visibilitychange', onVisible)
   checkAndFire()
 

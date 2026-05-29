@@ -37,12 +37,21 @@ export default function Settings() {
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState === 'visible' && typeof Notification !== 'undefined') {
-        setNotifStatus(Notification.permission)
+        const perm = Notification.permission
+        setNotifStatus(perm)
+        // sync store so scheduler starts if permission was granted externally
+        if (perm === 'granted' && !settings.reminderEnabled) {
+          updateSettings({ reminderEnabled: true })
+        }
       }
+    }
+    // also run on mount in case permission was already granted before onboarding
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && !settings.reminderEnabled) {
+      updateSettings({ reminderEnabled: true })
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [])
+  }, [settings.reminderEnabled, updateSettings])
 
   const isDirty =
     local.teacherName       !== settings.teacherName ||
