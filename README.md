@@ -1,14 +1,14 @@
 <div align="center">
 
-# TutorDesk
+# TutorGo
 
-**A personal tutor management app — built for independent educators who teach across time zones.**
+**The one-stop management app for independent tutors.**
 
-Manage students, log sessions, track billing, and generate invoices and receipts.
-Everything runs in your browser. No account. No server. No data leaves your device.
+Students, sessions, billing, invoices — all in one place, right in your browser.
+No account. No server. No data leaves your device.
 
-[![Live App](https://img.shields.io/badge/Live_App-TutorDesk-4F46E5?style=for-the-badge)](https://tutordesk.vercel.app)
-[![Version](https://img.shields.io/badge/version-1.0.0-0F172A?style=for-the-badge)](https://github.com/SumanR1602/TutorDesk/releases)
+[![Live App](https://img.shields.io/badge/Live_App-TutorGo-4F46E5?style=for-the-badge)](https://tutorgo.vercel.app)
+[![Version](https://img.shields.io/badge/version-1.0.0-0F172A?style=for-the-badge)](https://github.com/SumanR1602/TutorGo/releases)
 [![License](https://img.shields.io/badge/license-MIT-10B981?style=for-the-badge)](./LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-offline_ready-F59E0B?style=for-the-badge)](#)
 
@@ -16,9 +16,9 @@ Everything runs in your browser. No account. No server. No data leaves your devi
 
 ---
 
-## What is TutorDesk?
+## What is TutorGo?
 
-TutorDesk is a Progressive Web App (PWA) built specifically for tutors who teach students in different countries and time zones. It replaces scattered spreadsheets and manual calculations with one clean tool that works completely offline after the first load.
+TutorGo is a Progressive Web App (PWA) built specifically for tutors who teach students in different countries and time zones. It replaces scattered spreadsheets and manual calculations with one clean tool that works completely offline after the first load.
 
 ---
 
@@ -64,7 +64,7 @@ TutorDesk is a Progressive Web App (PWA) built specifically for tutors who teach
 
 No installation needed. Open the app and install it to your home screen like a native app.
 
-🔗 **[Open TutorDesk →](https://tutordesk.vercel.app)**
+🔗 **[Open TutorGo →](https://tutorgo.vercel.app)**
 
 | Platform | Steps |
 |---|---|
@@ -98,8 +98,8 @@ No installation needed. Open the app and install it to your home screen like a n
 **Prerequisites:** Node.js v18+, npm v9+
 
 ```bash
-git clone https://github.com/SumanR1602/TutorDesk.git
-cd TutorDesk
+git clone https://github.com/SumanR1602/TutorGo.git
+cd TutorGo
 npm install
 npm run dev
 ```
@@ -129,7 +129,7 @@ src/
 
 ## Deploying
 
-TutorDesk is a fully static PWA — no server or environment variables required.
+TutorGo is a fully static PWA — no server or environment variables required.
 
 1. Push to GitHub
 2. Import repo at [vercel.com](https://vercel.com) → **Add New Project**
@@ -141,7 +141,7 @@ Every push to `main` deploys automatically.
 
 ## License
 
-MIT © [Reguri Suman](https://github.com/SumanR1602/TutorDesk)
+MIT © [Reguri Suman](https://github.com/SumanR1602/TutorGo)
 
 ---
 
