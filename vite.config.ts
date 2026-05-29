@@ -21,9 +21,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['logo.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'TutorDesk',
-        short_name: 'TutorDesk',
-        description: 'Tutor session manager with timezone converter and billing tracker',
+        name: 'TutorsPad',
+        short_name: 'TutorsPad',
+        description: 'TutorsPad — the one-stop management app for independent tutors',
         theme_color: '#6366f1',
         background_color: '#ffffff',
         display: 'standalone',

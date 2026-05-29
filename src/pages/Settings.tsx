@@ -189,7 +189,7 @@ export default function Settings() {
                   Browser notifications enabled
                 </div>
                 <button
-                  onClick={() => showNotification('TutorDesk – Test', 'Reminder is working! 📚')}
+                  onClick={() => showNotification('TutorsPad – Test', 'Reminder is working! 📚')}
                   className="btn-secondary w-full text-sm"
                 >
                   Send test notification

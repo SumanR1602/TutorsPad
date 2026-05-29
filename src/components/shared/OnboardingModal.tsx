@@ -63,7 +63,7 @@ export default function OnboardingModal() {
           <div className="flex justify-center mb-3">
             <Logo size={56} />
           </div>
-          <h1 id="onboarding-title" className="text-white text-xl font-bold tracking-tight">Welcome to TutorDesk</h1>
+          <h1 id="onboarding-title" className="text-white text-xl font-bold tracking-tight">Welcome to TutorsPad</h1>
           <p className="text-indigo-100 text-sm mt-1">Your personal tutoring companion</p>
         </div>
 
