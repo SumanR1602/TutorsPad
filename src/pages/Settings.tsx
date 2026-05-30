@@ -1,28 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
-import { Bell, Save, X, Moon, Upload, Download } from 'lucide-react'
+import { Bell, Save, X, Upload, Download } from 'lucide-react'
 import Header from '@components/shared/Header'
 import Modal from '@components/shared/Modal'
 import Logo from '@components/shared/Logo'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { requestNotificationPermission, showNotification } from '@utils/notifications'
-import { exportAllData } from '@utils/storage'
-import { exportBackupJSON, parseBackupJSON } from '@utils/storage'
+import { exportAllData, exportBackupJSON, parseBackupJSON } from '@utils/storage'
 import type { ParsedBackup } from '@utils/storage'
+import { validateName } from '@utils/validators'
 import TimePicker12h from '@components/shared/TimePicker12h'
 import { useToast } from '@hooks/useToast'
 import type { Settings } from '@/types'
 
-type Theme = 'system' | 'light' | 'dark'
-const THEMES: { value: Theme; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light',  label: 'Light'  },
-  { value: 'dark',   label: 'Dark'   },
-]
-
 export default function Settings() {
-  const settings        = useStore((s) => s.settings)
-  const updateSettings  = useStore((s) => s.updateSettings)
-  const restoreBackup   = useStore((s) => s.restoreBackup)
+  const settings        = useAppStore((s) => s.settings)
+  const updateSettings  = useAppStore((s) => s.updateSettings)
+  const restoreBackup   = useAppStore((s) => s.restoreBackup)
   const { showToast }   = useToast()
 
   const [local, setLocal] = useState<Settings>({ ...settings })
@@ -57,20 +50,8 @@ export default function Settings() {
     local.teacherName       !== settings.teacherName ||
     local.dailyReminderTime !== settings.dailyReminderTime
 
-  function validateTeacherName(name: string): string | null {
-    const t = name.trim()
-    if (t.length < 3) return 'Name must be at least 3 characters.'
-    if (t.length > 50) return 'Name must be 50 characters or fewer.'
-    if (/[^a-zA-Z\u0900-\u097F .'\-]/.test(t)) return 'Name can only contain letters, spaces, dots, hyphens or apostrophes.'
-    if (!/[a-zA-Z\u0900-\u097F]/.test(t[0])) return 'Name must start with a letter.'
-    if (!/[a-zA-Z\u0900-\u097F]/.test(t[t.length - 1])) return 'Name must end with a letter.'
-    if (/[ .'\-]{2,}/.test(t)) return 'Name cannot have consecutive spaces or special characters.'
-    if ((t.match(/[a-zA-Z\u0900-\u097F]/g) ?? []).length < 3) return 'Name must contain at least 3 letters.'
-    return null
-  }
-
   function handleSave() {
-    const err = validateTeacherName(local.teacherName)
+    const err = validateName(local.teacherName)
     if (err) { showToast(err, 'error'); return }
     updateSettings({
       teacherName:       local.teacherName.trim(),
@@ -118,53 +99,30 @@ export default function Settings() {
       <div className="px-4 space-y-4 pb-6">
         {/* Profile */}
         <div className="card space-y-3">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Your profile</h2>
+            <h2 className="text-sm font-semibold text-gray-700">Your profile</h2>
           <div>
             <label className="label">Your name</label>
             <input
               className="input"
               value={local.teacherName}
               onChange={(e) => setLocal({ ...local, teacherName: e.target.value })}
-              placeholder="Your name"
+              placeholder="e.g. Shri Ram"
               maxLength={50}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Timezone</label>
-              <div className="input bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-default select-none">
+              <div className="input bg-gray-50 text-gray-500 cursor-default select-none">
                 IST (Asia/Kolkata)
               </div>
             </div>
             <div>
               <label className="label">Currency</label>
-              <div className="input bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-default select-none">
+              <div className="input bg-gray-50 text-gray-500 cursor-default select-none">
                 Indian Rupee (₹)
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Appearance */}
-        <div className="card space-y-3">
-          <div className="flex items-center gap-2">
-            <Moon size={16} className="text-indigo-600" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Appearance</h2>
-          </div>
-          <div className="flex gap-2">
-            {THEMES.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => updateSettings({ theme: t.value })}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                  (settings.theme ?? 'system') === t.value
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -172,7 +130,7 @@ export default function Settings() {
         <div className="card space-y-3">
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-indigo-600" />
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Daily reminder</h2>
+            <h2 className="text-sm font-semibold text-gray-700">Daily reminder</h2>
           </div>
           <div>
             <label className="label">Reminder time (IST)</label>
@@ -229,7 +187,7 @@ export default function Settings() {
 
         {/* Data */}
         <div className="card space-y-3">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Data</h2>
+          <h2 className="text-sm font-semibold text-gray-700">Data</h2>
 
           {/* Export Excel */}
           <button
@@ -273,9 +231,9 @@ export default function Settings() {
         </div>
 
         {/* Install PWA hint */}
-        <div className="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800">
-          <h2 className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 mb-1">Install on home screen</h2>
-          <p className="text-xs text-indigo-600 dark:text-indigo-400">
+        <div className="card bg-indigo-50 border-indigo-100">
+          <h2 className="text-sm font-semibold text-indigo-700 mb-1">Install on home screen</h2>
+          <p className="text-xs text-indigo-600">
             Android: tap ⋮ → "Add to Home Screen"<br />
             iPhone: tap Share → "Add to Home Screen"
           </p>
@@ -295,12 +253,12 @@ export default function Settings() {
       >
         {pendingImport && (
           <div className="space-y-4">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800">
               This will <strong>replace all current data</strong> with the backup. This cannot be undone.
             </div>
-            <div className="space-y-1 text-sm text-gray-700 dark:text-gray-200">
+            <div className="space-y-1 text-sm text-gray-700">
               <p>Found in backup:</p>
-              <ul className="ml-4 list-disc text-gray-600 dark:text-gray-300 space-y-0.5">
+              <ul className="ml-4 list-disc text-gray-600 space-y-0.5">
                 <li>{pendingImport.students.length} student{pendingImport.students.length !== 1 ? 's' : ''}</li>
                 <li>{pendingImport.sessions.length} session{pendingImport.sessions.length !== 1 ? 's' : ''}</li>
                 <li>{pendingImport.payments.length} payment{pendingImport.payments.length !== 1 ? 's' : ''}</li>

@@ -18,7 +18,12 @@ export default function EditPaymentForm({ payment, student, onSave, onClose }: E
   })
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave(form) }} className="space-y-4">
+    <form onSubmit={(e) => {
+      e.preventDefault()
+      const amount = parseFloat(String(form.amount))
+      if (!amount || amount <= 0) return
+      onSave({ ...form, amount })
+    }} className="space-y-4">
       <div>
         <label className="label">Date</label>
         <input

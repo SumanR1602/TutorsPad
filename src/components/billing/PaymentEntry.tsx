@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { formatCurrency } from '@utils/billing'
 import { useToast } from '@hooks/useToast'
 
@@ -8,9 +8,9 @@ interface PaymentEntryProps {
 }
 
 export default function PaymentEntry({ onClose }: PaymentEntryProps) {
-  const students   = useStore((s) => s.students)
-  const getBalance = useStore((s) => s.getBalance)
-  const addPayment = useStore((s) => s.addPayment)
+  const students   = useAppStore((s) => s.students)
+  const getBalance = useAppStore((s) => s.getBalance)
+  const addPayment = useAppStore((s) => s.addPayment)
   const { showToast } = useToast()
 
   const [form, setForm] = useState({

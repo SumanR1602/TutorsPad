@@ -39,9 +39,9 @@ export default function Logo({ size = 32, withName = false, className = '' }: Lo
       {withName && (
         <span
           style={{ fontSize: size * 0.55, lineHeight: 1 }}
-          className="font-bold tracking-tight text-gray-900 dark:text-white"
+          className="font-bold tracking-tight text-gray-900"
         >
-          Tutor<span className="text-indigo-600 dark:text-indigo-400">Desk</span>
+          Tutors<span className="text-indigo-600">Pad</span>
         </span>
       )}
     </span>

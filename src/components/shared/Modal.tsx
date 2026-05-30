@@ -33,20 +33,20 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
         ref={panelRef}
-        className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-t-3xl p-6 mb-[64px]"
+        className="relative w-full max-w-md bg-white rounded-t-3xl p-6 mb-[64px]"
         style={{ maxHeight: 'calc(92dvh - 64px)', overflowY: 'auto' }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 id="modal-title" className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <h2 id="modal-title" className="text-base font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close modal"
-            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1.5 rounded-full hover:bg-gray-100"
           >
-            <X size={18} className="text-gray-500 dark:text-gray-400" />
+            <X size={18} className="text-gray-500" />
           </button>
         </div>
         {children}

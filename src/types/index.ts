@@ -39,7 +39,6 @@ export interface Settings {
   dailyReminderTime: string  // "HH:mm"
   reminderEnabled: boolean
   currency: string
-  theme: 'system' | 'light' | 'dark'
   onboardingCompleted: boolean
 }
 

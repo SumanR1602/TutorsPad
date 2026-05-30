@@ -5,22 +5,18 @@ import Modal from '@components/shared/Modal'
 import ConfirmModal from '@components/shared/ConfirmModal'
 import SessionForm from '@components/sessions/SessionForm'
 import FilterPanel from '@components/sessions/FilterPanel'
-import useStore from '@store/useStore'
+import StudentAvatar from '@components/shared/StudentAvatar'
+import useAppStore from '@store/useStore'
 import { formatDate } from '@utils/billing'
+import { formatMonthLong } from '@utils/date'
 import { useToast } from '@hooks/useToast'
 import type { Session } from '@/types'
 
-/** "YYYY-MM"  →  "May 2026" */
-function fmtMonth(ym: string): string {
-  const [y, m] = ym.split('-')
-  return new Date(+y, +m - 1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' })
-}
-
 export default function Sessions() {
-  const students      = useStore((s) => s.students)
-  const sessions      = useStore((s) => s.sessions)
-  const payments      = useStore((s) => s.payments)
-  const deleteSession = useStore((s) => s.deleteSession)
+  const students      = useAppStore((s) => s.students)
+  const sessions      = useAppStore((s) => s.sessions)
+  const payments      = useAppStore((s) => s.payments)
+  const deleteSession = useAppStore((s) => s.deleteSession)
   const { showToast } = useToast()
 
   const [showLog,           setShowLog]           = useState(false)
@@ -70,7 +66,7 @@ export default function Sessions() {
               className={`relative p-2 rounded-xl border transition-colors ${
                 hasActiveFilters
                   ? 'bg-primary-600 border-primary-600 text-white'
-                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 hover:border-primary-400 hover:text-primary-600'
+                  : 'bg-white border-gray-200 text-gray-500 hover:border-primary-400 hover:text-primary-600'
               }`}
               aria-label="Filter sessions"
             >
@@ -95,7 +91,7 @@ export default function Sessions() {
               className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
                 activeMonth === null
                   ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500'
+                  : 'bg-white border-gray-200 text-gray-500'
               }`}
             >
               All
@@ -109,10 +105,10 @@ export default function Sessions() {
                   className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
                     activeMonth === ym
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500'
+                      : 'bg-white border-gray-200 text-gray-500'
                   }`}
                 >
-                  {fmtMonth(ym)}
+                  {formatMonthLong(ym)}
                   <span className={`ml-1.5 text-[10px] ${activeMonth === ym ? 'text-indigo-200' : 'text-gray-400'}`}>
                     {count}
                   </span>
@@ -148,15 +144,10 @@ export default function Sessions() {
             return (
               <div key={session.id} className="card flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
-                    style={{ backgroundColor: student?.color ?? '#6366f1' }}
-                  >
-                    {student?.name?.charAt(0) ?? '?'}
-                  </div>
+                  <StudentAvatar name={student?.name ?? '?'} color={student?.color ?? '#6366f1'} size="md" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">
+                      <p className="text-sm font-medium text-gray-800 truncate">
                         {student?.name ?? 'Unknown'}
                       </p>
                       {session.type === 'extra' && (
@@ -171,18 +162,18 @@ export default function Sessions() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mr-1">{session.hours}h</p>
+                  <p className="text-sm font-semibold text-gray-900 mr-1">{session.hours}h</p>
                   <button
                     onClick={() => setEditSession(session)}
                     aria-label="Edit session"
-                    className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-gray-300 hover:text-primary-500 transition-colors"
+                    className="p-1.5 hover:bg-primary-50 rounded-lg text-gray-300 hover:text-primary-500 transition-colors"
                   >
                     <Pencil size={13} />
                   </button>
                   <button
                     onClick={() => setConfirmDeleteId(session.id)}
                     aria-label="Delete session"
-                    className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-300 hover:text-red-400 transition-colors"
+                    className="p-1.5 hover:bg-red-50 rounded-lg text-gray-300 hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>

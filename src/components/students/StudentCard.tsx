@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Clock, Trash2, Pencil, History, CreditCard } from 'lucide-react'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import ConfirmModal from '../shared/ConfirmModal'
 import { format12h, convertISTtoTZ, getUTCOffsetLabel } from '@utils/timezone'
 import { formatCurrency } from '@utils/billing'
@@ -8,6 +8,7 @@ import { DEFAULT_CURRENCY } from '@constants'
 import { useToast } from '@hooks/useToast'
 import Modal from '../shared/Modal'
 import StudentForm from './StudentForm'
+import StudentAvatar from '../shared/StudentAvatar'
 import StudentSessionHistory from './StudentSessionHistory'
 import StudentPaymentHistory from './StudentPaymentHistory'
 import type { Student } from '@/types'
@@ -17,31 +18,33 @@ interface StudentCardProps {
 }
 
 export default function StudentCard({ student }: StudentCardProps) {
-  const getTotalHours = useStore((s) => s.getTotalHours)
-  const getBalance    = useStore((s) => s.getBalance)
-  const deleteStudent = useStore((s) => s.deleteStudent)
+  const getTotalHours = useAppStore((s) => s.getTotalHours)
+  const getBalance    = useAppStore((s) => s.getBalance)
+  const deleteStudent = useAppStore((s) => s.deleteStudent)
   const { showToast } = useToast()
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showEdit,      setShowEdit]      = useState(false)
   const [showHistory,   setShowHistory]   = useState(false)
   const [showPayments,  setShowPayments]  = useState(false)
-  // confirmDelete is the modal open state now
 
   const hours   = getTotalHours(student.id)
   const balance  = getBalance(student.id)
-  const tzAbbr   = getUTCOffsetLabel(student.timezone)
+  const tzAbbr = getUTCOffsetLabel(student.timezone)
 
   // Live local time — ticks every minute (no seconds needed here)
-  const getLocalTime = () => new Intl.DateTimeFormat('en-US', {
-    timeZone: student.timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  }).format(new Date())
-  const [currentTime, setCurrentTime] = useState(getLocalTime)
+  function getLocalTime(tz: string) {
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date())
+  }
+  const [currentTime, setCurrentTime] = useState(() => getLocalTime(student.timezone))
   useEffect(() => {
-    const id = setInterval(() => setCurrentTime(getLocalTime()), 60_000)
+    setCurrentTime(getLocalTime(student.timezone))
+    const id = setInterval(() => setCurrentTime(getLocalTime(student.timezone)), 60_000)
     return () => clearInterval(id)
   }, [student.timezone])
 
@@ -55,17 +58,12 @@ export default function StudentCard({ student }: StudentCardProps) {
       <div className="card flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0"
-              style={{ backgroundColor: student.color ?? '#6366f1' }}
-            >
-              {student.name.charAt(0).toUpperCase()}
-            </div>
+            <StudentAvatar name={student.name} color={student.color ?? '#6366f1'} size="lg" />
             <div>
               <div className="flex items-center gap-1.5">
-                <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{student.name}</p>
+                <p className="font-semibold text-gray-900 text-sm">{student.name}</p>
                 {student.label && (
-                  <span className="text-[10px] font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-medium bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">
                     {student.label}
                   </span>
                 )}
@@ -78,7 +76,7 @@ export default function StudentCard({ student }: StudentCardProps) {
             <button
               onClick={() => setShowEdit(true)}
               aria-label="Edit student"
-              className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-300 hover:text-indigo-500 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-indigo-50 text-gray-300 hover:text-indigo-500 transition-colors"
             >
               <Pencil size={15} />
             </button>
@@ -86,7 +84,7 @@ export default function StudentCard({ student }: StudentCardProps) {
             <button
               onClick={() => setConfirmDelete(true)}
               aria-label="Delete student"
-              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-300 hover:text-red-400 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
             >
               <Trash2 size={15} />
             </button>
@@ -94,15 +92,15 @@ export default function StudentCard({ student }: StudentCardProps) {
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5 text-center">
+          <div className="bg-gray-50 rounded-xl p-2.5 text-center">
             <p className="text-[10px] text-gray-400 mb-0.5">Local time ({tzAbbr})</p>
-            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{currentTime}</p>
+            <p className="text-xs font-semibold text-gray-800">{currentTime}</p>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5 text-center">
-            <p className="text-[10px] text-gray-400 mb-0.5">Total hrs</p>
-            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{hours.toFixed(1)}h</p>
+          <div className="bg-gray-50 rounded-xl p-2.5 text-center">
+            <p className="text-[10px] text-gray-400 mb-0.5">Hours</p>
+            <p className="text-xs font-semibold text-gray-800">{hours.toFixed(1)}h</p>
           </div>
-          <div className={`rounded-xl p-2.5 text-center ${balance > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+          <div className={`rounded-xl p-2.5 text-center ${balance > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
             <p className="text-[10px] text-gray-400 mb-0.5">{balance > 0 ? 'Pending' : 'Paid up'}</p>
             <p className={`text-xs font-semibold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {formatCurrency(balance, student.currency ?? DEFAULT_CURRENCY)}
@@ -128,16 +126,16 @@ export default function StudentCard({ student }: StudentCardProps) {
           )}
         </div>
 
-        <div className="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex gap-2 pt-1 border-t border-gray-100">
           <button
             onClick={() => setShowHistory(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <History size={13} /> Sessions
           </button>
           <button
             onClick={() => setShowPayments(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors"
           >
             <CreditCard size={13} /> Payments
           </button>

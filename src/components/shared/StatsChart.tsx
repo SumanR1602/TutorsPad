@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { formatCurrency } from '@utils/billing'
+import { formatMonthShort } from '@utils/date'
 import type { Session, Student } from '@/types'
 
 interface WindowOption {
@@ -20,14 +21,6 @@ interface MonthData {
     hours: number
     earnings: number
   }>
-}
-
-function shortMonth(ym: string): string {
-  const [y, m] = ym.split('-')
-  return new Date(parseInt(y), parseInt(m) - 1).toLocaleString('en-IN', {
-    month: 'short',
-    year: '2-digit',
-  })
 }
 
 function allSessionMonths(sessions: Session[]): string[] {
@@ -56,8 +49,8 @@ function findLastIndexLE(arr: string[], cur: string): number {
 }
 
 export default function StatsChart() {
-  const students = useStore((s) => s.students)
-  const sessions = useStore((s) => s.sessions)
+  const students = useAppStore((s) => s.students)
+  const sessions = useAppStore((s) => s.sessions)
 
   const [mode,        setMode]        = useState<Mode>('hours')
   const [winLabel,    setWinLabel]    = useState('6M')
@@ -152,14 +145,14 @@ export default function StatsChart() {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Sessions</h2>
-        <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 text-xs gap-0.5">
+        <h2 className="text-sm font-semibold text-gray-800">Sessions</h2>
+        <div className="flex items-center bg-gray-100 rounded-xl p-0.5 text-xs gap-0.5">
           {(['hours', 'earnings'] as Mode[]).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`px-3 py-1 rounded-lg font-medium capitalize transition-all ${
-                mode === m ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+                mode === m ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500'
               }`}
             >
               {m}
@@ -170,13 +163,13 @@ export default function StatsChart() {
 
       {visibleWindows.length > 1 && (
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 text-xs gap-0.5">
+          <div className="flex items-center bg-gray-100 rounded-xl p-0.5 text-xs gap-0.5">
             {visibleWindows.map((w) => (
               <button
                 key={w.label}
                 onClick={() => { setWinLabel(w.label); setOffset(0); setActiveMonth(null) }}
                 className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
-                  winLabel === w.label ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
+                  winLabel === w.label ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500'
                 }`}
               >
                 {w.label}
@@ -189,18 +182,18 @@ export default function StatsChart() {
               <button
                 onClick={() => { setOffset((o) => o + 1); setActiveMonth(null) }}
                 disabled={!canGoBack}
-                className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 disabled:opacity-30 hover:bg-gray-200 transition-colors"
                 aria-label="Earlier period"
               >
                 <ChevronLeft size={13} />
               </button>
-              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium w-24 text-center select-none">
-                {shortMonth(visibleMonths[0])} – {shortMonth(visibleMonths[visibleMonths.length - 1])}
+              <span className="text-[10px] text-gray-400 font-medium w-24 text-center select-none">
+                {formatMonthShort(visibleMonths[0])} – {formatMonthShort(visibleMonths[visibleMonths.length - 1])}
               </span>
               <button
                 onClick={() => { setOffset((o) => Math.max(0, o - 1)); setActiveMonth(null) }}
                 disabled={!canGoForward}
-                className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 disabled:opacity-30 hover:bg-gray-200 transition-colors"
                 aria-label="Later period"
               >
                 <ChevronRight size={13} />
@@ -225,9 +218,9 @@ export default function StatsChart() {
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-gray-500 w-11 shrink-0 font-medium">
-                    {shortMonth(d.month)}
+                    {formatMonthShort(d.month)}
                   </span>
-                  <div className="flex-1 h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500 ease-out"
                       style={{
@@ -237,11 +230,11 @@ export default function StatsChart() {
                       }}
                     />
                   </div>
-                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 w-14 text-right shrink-0">
+                  <span className="text-[11px] font-semibold text-gray-700 w-14 text-right shrink-0">
                     {isEmpty ? '—' : fmtVal(d)}
                   </span>
                   {!isEmpty && (
-                    <span className="text-gray-300 dark:text-gray-500 text-[9px] shrink-0 w-2">
+                    <span className="text-gray-300 text-[9px] shrink-0 w-2">
                       {isActive ? '▲' : '▼'}
                     </span>
                   )}
@@ -249,7 +242,7 @@ export default function StatsChart() {
               </button>
 
               {isActive && d.perStudent.length > 0 && (
-                <div className="mt-2 ml-[52px] space-y-1.5 pl-3 border-l-2 border-indigo-100 dark:border-indigo-900 pb-1">
+                <div className="mt-2 ml-[52px] space-y-1.5 pl-3 border-l-2 border-indigo-100 pb-1">
                   {d.perStudent.map((student) => {
                     const sv   = getStudentV(student)
                     const sPct = getVal(d) > 0 ? (sv / getVal(d)) * 100 : 0
@@ -257,13 +250,13 @@ export default function StatsChart() {
                       <div key={student.id} className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: student.color }} />
                         <span className="text-[10px] text-gray-500 w-20 truncate shrink-0">{student.name}</span>
-                        <div className="flex-1 h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all duration-300"
                             style={{ width: `${sPct}%`, backgroundColor: student.color }}
                           />
                         </div>
-                        <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 w-14 text-right shrink-0">
+                        <span className="text-[10px] font-medium text-gray-600 w-14 text-right shrink-0">
                           {fmtStudentV(student)}
                         </span>
                       </div>

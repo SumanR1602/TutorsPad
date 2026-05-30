@@ -25,3 +25,5 @@ npm-debug.log*
 dev-dist/
 
 .code-review-graph/
+.vercel
+.env*

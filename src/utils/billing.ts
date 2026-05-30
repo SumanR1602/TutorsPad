@@ -20,11 +20,6 @@ export function formatDate(dateStr: string): string {
   return `${d}/${m}/${y}`
 }
 
-/** Return today's date as "YYYY-MM-DD". */
-export function getTodayISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
-
 /**
  * Build a monthly breakdown for a student.
  * Returns array of { key, month, hours, amount, paid, balance }
@@ -85,21 +80,37 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
 }
 
 /**
- * Open a new browser tab, write an HTML document to it, and auto-trigger
- * PDF download via html2pdf.js (served locally from /html2pdf.bundle.min.js).
- * Falls back to window.print() if the script hasn't loaded within 5 s.
+ * Generate PDF via the /api/pdf serverless function (Puppeteer on Vercel).
+ * Falls back to window.print() if the API is unavailable.
  */
-export function openPDFWindow(html: string, filename: string): void {
-  void filename // filename is embedded in the template's dlPDF script
+export async function openPDFWindow(html: string, filename: string): Promise<void> {
+  try {
+    const res = await fetch('/api/pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html, filename }),
+    })
 
-  const autoHtml = html.replace(
-    '</body>',
-    `<script src="/html2pdf.bundle.min.js"><\/script></body>`,
-  )
+    if (res.ok) {
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${filename}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      return
+    }
+  } catch {
+    // API unavailable — fall through to print fallback
+  }
 
+  // Fallback: open in new tab and auto-trigger print dialog
   const w = window.open('', '_blank')
   if (w) {
-    w.document.write(autoHtml)
+    w.document.write(html)
     w.document.close()
   }
 }

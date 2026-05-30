@@ -7,7 +7,7 @@
  */
 import { useState, useMemo } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { useToast } from '@hooks/useToast'
 import { HOUR_OPTIONS } from '@constants'
 import type { Session, Student } from '@/types'
@@ -25,9 +25,9 @@ export default function SessionForm({
   preselectedStudentId,
   onClose,
 }: SessionFormProps) {
-  const addSession    = useStore((s) => s.addSession)
-  const updateSession = useStore((s) => s.updateSession)
-  const payments      = useStore((s) => s.payments)
+  const addSession    = useAppStore((s) => s.addSession)
+  const updateSession = useAppStore((s) => s.updateSession)
+  const payments      = useAppStore((s) => s.payments)
   const { showToast } = useToast()
 
   const isEdit = !!session
@@ -56,6 +56,10 @@ export default function SessionForm({
     e.preventDefault()
     if (!form.studentId) return
     const hours = parseFloat(String(form.hours))
+    if (isNaN(hours) || hours <= 0) {
+      showToast('Please enter valid hours (must be > 0)', 'error')
+      return
+    }
     if (isEdit) {
       updateSession(session.id, { date: form.date, hours, type: form.type, note: form.note })
       showToast('Session updated', 'success')
@@ -86,7 +90,7 @@ export default function SessionForm({
       <div>
         <label className="label">Student *</label>
         {isEdit ? (
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{studentName}</p>
+          <p className="text-sm font-medium text-gray-700">{studentName}</p>
         ) : (
           <select
             className="input"
@@ -125,7 +129,7 @@ export default function SessionForm({
               className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
                 form.hours === h
                   ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                  : 'bg-white text-gray-600 border-gray-200'
               }`}
             >
               {h}h
@@ -146,7 +150,7 @@ export default function SessionForm({
               className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
                 form.type === t
                   ? 'bg-primary-600 text-white border-primary-600'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                  : 'bg-white text-gray-600 border-gray-200'
               }`}
             >
               {t.charAt(0).toUpperCase() + t.slice(1)}
