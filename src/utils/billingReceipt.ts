@@ -8,13 +8,13 @@ import { buildReceiptHTML } from './templates/receiptTemplate'
 import { DEFAULT_CURRENCY } from '@constants'
 import type { Student, Session, Payment } from '@/types'
 
-export function openReceiptPDF(
+export async function openReceiptPDF(
   student: Student,
   sessions: Session[],
   payments: Payment[],
   payment: Payment,
   teacherName: string = 'Teacher',
-): void {
+): Promise<void> {
   const currency     = student.currency ?? DEFAULT_CURRENCY
   const isMonthly    = (student.rateType ?? 'hourly') === 'monthly'
   const formatValue  = (n: number) => formatCurrency(n, currency)
@@ -29,6 +29,7 @@ export function openReceiptPDF(
       : (a.createdAt ?? '').localeCompare(b.createdAt ?? ''),
   )
   const currentIdx  = sortedPayments.findIndex((p) => p.id === payment.id)
+  if (currentIdx === -1) return  // payment not in list — bail to avoid slice(0,-1) bug
   const prevPayment = currentIdx > 0 ? sortedPayments[currentIdx - 1] : null
   const periodStart = prevPayment ? prevPayment.date : null
 
@@ -37,9 +38,8 @@ export function openReceiptPDF(
     .filter((s) => s.date <= payment.date && (!periodStart || s.date > periodStart))
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  // ── 3-4. Cumulative totals ────────────────────────────────────────
+  // ── 3. Cumulative totals ────────────────────────────────────────
   const paymentsUpTo  = payments.filter((p) => p.date <= payment.date)
-  const totalPaidUpTo = paymentsUpTo.reduce((sum, p) => sum + p.amount, 0)
 
   // ── 5. Carry-forward balance ──────────────────────────────────────
   const prevPaymentsTotal = sortedPayments
@@ -76,9 +76,6 @@ export function openReceiptPDF(
   const periodLabel = periodStart
     ? `${dayAfter(periodStart)} → ${payment.date}`
     : `up to ${payment.date}`
-
-  // Suppress unused variable warning — used for cumulative display in template
-  void totalPaidUpTo
 
   // ── 7. Build session rows HTML ─────────────────────────────────────
   let sessionRows = ''
@@ -126,5 +123,5 @@ export function openReceiptPDF(
   // ── 9. Open tab + auto-download ──────────────────────────────────────
   const safeName = student.name.replace(/[^a-zA-Z0-9]/g, '-')
   const filename = `Receipt_${safeName}_${payment.date}_${recNo}`
-  openPDFWindow(html, filename)
+  await openPDFWindow(html, filename)
 }

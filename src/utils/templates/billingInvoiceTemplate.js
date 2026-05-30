@@ -2,6 +2,12 @@
  * billingInvoiceTemplate.js
  * Pure function — takes pre-computed invoice data, returns an HTML string.
  */
+function escHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c])
+}
+
 export function buildInvoiceHTML({
   invNo, teacherName, issued, student, isMonthly,
   periodLabel, sessionCount, totalHours, periodDue, carryForward, amountDueNow,
@@ -13,12 +19,18 @@ export function buildInvoiceHTML({
   const dueBg       = duePositive ? '#4f46e5' : '#dcfce7'
   const dueBorder   = duePositive ? 'none'    : '1px solid #bbf7d0'
   const nameSlug    = student.name.split(' ').join('-')
+  const safeTeacher = escHtml(teacherName)
+  const safeName    = escHtml(student.name)
+  const safeCity    = escHtml(student.city ?? '')
+  const safeInvNo   = escHtml(invNo)
+  const safeIssued  = escHtml(issued)
+  const safePeriod  = escHtml(periodLabel)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Invoice_${nameSlug}_${invNo}</title>
+  <title>Invoice_${nameSlug}_${safeInvNo}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -44,12 +56,16 @@ export function buildInvoiceHTML({
       overflow: hidden;
       box-shadow: 0 4px 28px rgba(79,70,229,.14);
     }
-    .wm-svg {
-      position: absolute; top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none; z-index: 2;
+    .wm-text {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-35deg);
+      font-family: 'Inter', Arial, sans-serif;
+      font-size: 72px; font-weight: 700;
+      color: rgba(79,70,229,0.10); white-space: nowrap;
+      letter-spacing: 10px; pointer-events: none; z-index: 2;
+      user-select: none;
     }
-    .page > *:not(.wm-svg) { position: relative; z-index: 1; }
+    .page > *:not(.wm-text) { position: relative; z-index: 1; }
     .inv-header {
       background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
       padding: 14px 24px;
@@ -149,16 +165,11 @@ export function buildInvoiceHTML({
     }
   </style>
   <script>
-    function dlPDF() {
-      if (typeof html2pdf === 'undefined') { window.print(); return; }
-      html2pdf().set({
-        margin: [6,6,6,6],
-        filename: '${invNo}.pdf',
-        image: { type: 'jpeg', quality: 0.97 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(document.querySelector('.page')).save();
-    }
+    function dlPDF() { window.print(); }
+    window.addEventListener('load', function() {
+      // Short delay lets fonts render before the print dialog opens
+      setTimeout(function() { window.print(); }, 600);
+    });
   <\/script>
 </head>
 <body>
@@ -171,28 +182,22 @@ export function buildInvoiceHTML({
         <polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
-      Download PDF
+      Save as PDF
     </button>
   </div>
 
   <div class="page">
 
     <!-- Watermark -->
-    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
-      viewBox="0 0 760 1060" preserveAspectRatio="xMidYMid slice">
-      <text x="380" y="530" text-anchor="middle" dominant-baseline="middle"
-        transform="rotate(-35, 380, 530)"
-        font-family="Inter,Arial,sans-serif" font-size="72" font-weight="700"
-        fill="#4f46e5" opacity="0.10" letter-spacing="10">TutorsPad</text>
-    </svg>
+    <div class="wm-text" aria-hidden="true">TutorsPad</div>
 
     <!-- Header -->
     <div class="inv-header">
       <div style="display:flex;align-items:center;gap:12px">
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0">
           <svg style="width:36px;height:36px" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-            <defs><linearGradient id="inv-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4338ca"/></linearGradient></defs>
-            <rect width="512" height="512" rx="112" fill="url(#inv-grad)"/>
+            <defs><linearGradient id="ilogo-g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#4338ca"/></linearGradient></defs>
+            <rect width="512" height="512" rx="112" fill="url(#ilogo-g)"/>
             <rect x="96" y="248" width="320" height="36" rx="18" fill="white"/>
             <rect x="128" y="284" width="36" height="120" rx="18" fill="white"/>
             <rect x="348" y="284" width="36" height="120" rx="18" fill="white"/>
@@ -202,17 +207,17 @@ export function buildInvoiceHTML({
             <rect x="310" y="118" width="14" height="72" rx="7" fill="rgba(255,255,255,0.6)" transform="rotate(20 317 154)"/>
             <polygon points="317,186 310,202 324,202" fill="rgba(255,255,255,0.5)" transform="rotate(20 317 154)"/>
           </svg>
-          <span style="font-size:7px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase">TutorsPad</span>
+          <span style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:2px;text-transform:uppercase">TutorsPad</span>
         </div>
         <div>
-          <div class="t-name">${teacherName}</div>
+          <div class="t-name">${safeTeacher}</div>
           <div class="t-role">Private Tutor</div>
         </div>
       </div>
       <div class="inv-right">
         <div class="inv-word">Invoice</div>
-        <div class="inv-num">${invNo}</div>
-        <div class="inv-date">Issued ${issued}</div>
+        <div class="inv-num">${safeInvNo}</div>
+        <div class="inv-date">Issued ${safeIssued}</div>
       </div>
     </div>
 
@@ -220,14 +225,14 @@ export function buildInvoiceHTML({
     <div class="meta-grid">
       <div class="meta-cell">
         <div class="m-label">Billed To</div>
-        <div class="m-name">${student.name}</div>
-        ${student.city ? `<div class="m-sub">${student.city}${student.timezone ? ` &middot; ${student.timezone}` : ''}</div>` : ''}
+        <div class="m-name">${safeName}</div>
+        ${safeCity ? `<div class="m-sub">${safeCity}${student.timezone ? ` &middot; ${escHtml(student.timezone)}` : ''}</div>` : ''}
         <div class="rate-chip">${fmt(student.ratePerHour)} / ${isMonthly ? 'month' : 'hour'}</div>
       </div>
       <div class="meta-cell">
         <div class="m-label">Invoice</div>
-        <div class="m-name">${invNo}</div>
-        <div class="m-sub" style="margin-top:3px">Issued ${issued}</div>
+        <div class="m-name">${safeInvNo}</div>
+        <div class="m-sub" style="margin-top:3px">Issued ${safeIssued}</div>
       </div>
     </div>
 
@@ -240,7 +245,7 @@ export function buildInvoiceHTML({
 
     <!-- Sessions table -->
     <div class="tbl-wrap">
-      <div class="tbl-label">Sessions This Period &nbsp;<span style="font-weight:400;color:#94a3b8">(${periodLabel})</span></div>
+      <div class="tbl-label">Sessions This Period &nbsp;<span style="font-weight:400;color:#94a3b8">(${safePeriod})</span></div>
       <table class="items">
         <thead>
           <tr>
@@ -289,10 +294,10 @@ export function buildInvoiceHTML({
     <div class="inv-footer">
       <div class="f-left">
         <em>Please make payment at your earliest convenience.</em>
-        <span>Generated via TutorsPad &middot; ${issued}</span>
+        <span>Generated via TutorsPad &middot; ${safeIssued}</span>
       </div>
       <div class="f-right">
-        <div class="f-name">${teacherName}</div>
+        <div class="f-name">${safeTeacher}</div>
         <div class="f-role">Private Tutor</div>
       </div>
     </div>

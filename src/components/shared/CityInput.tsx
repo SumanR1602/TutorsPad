@@ -58,15 +58,15 @@ export default function CityInput({ value, onChange, onTimezoneDetected }: CityI
       </div>
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden">
+        <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden">
           {suggestions.map((suggestion) => (
             <li key={suggestion.city}>
               <button
                 type="button"
                 onMouseDown={() => handleSelect(suggestion)}
-                className="w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                className="w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-indigo-50 transition-colors"
               >
-                <span className="text-sm text-gray-800 dark:text-gray-100">{suggestion.label}</span>
+                <span className="text-sm text-gray-800">{suggestion.label}</span>
                 <span className="text-[11px] text-indigo-400 font-medium shrink-0">{suggestion.timezone}</span>
               </button>
             </li>

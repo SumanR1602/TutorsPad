@@ -46,7 +46,7 @@ interface StoreState {
   restoreBackup: (students: Student[], sessions: Session[], payments: Payment[]) => void
 }
 
-const useStore = create<StoreState>()(
+const useAppStore = create<StoreState>()(
   persist(
     (set, get) => ({
       // ── Initial state ─────────────────────────────────────────────────────
@@ -60,7 +60,6 @@ const useStore = create<StoreState>()(
         dailyReminderTime: '20:00',
         reminderEnabled: false,
         currency: DEFAULT_CURRENCY,
-        theme: 'system',
         onboardingCompleted: false,
       },
 
@@ -197,4 +196,4 @@ const useStore = create<StoreState>()(
   ),
 )
 
-export default useStore
+export default useAppStore

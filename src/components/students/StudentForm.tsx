@@ -6,11 +6,12 @@
  * Edit mode — pass a `student` prop. Calls updateStudent() and shows "Save changes".
  */
 import { useState } from 'react'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { TIMEZONE_OPTIONS } from '@utils/timezone'
 import CityInput from '../shared/CityInput'
 import TimePicker12h from '../shared/TimePicker12h'
 import { useToast } from '@hooks/useToast'
+import { validateName } from '@utils/validators'
 import { COLORS, CURRENCIES, DEFAULT_TIMEZONE, DEFAULT_CURRENCY, DEFAULT_RATE_TYPE } from '@constants'
 import type { Student } from '@/types'
 
@@ -37,34 +38,10 @@ interface StudentFormProps {
   onClose: () => void
 }
 
-const LETTER = /[a-zA-Z\u0900-\u097F]/
-
-function validateName(name: string): string | null {
-  const trimmed = name.trim()
-  if (trimmed.length < 3)  return 'Name must be at least 3 characters.'
-  if (trimmed.length > 50) return 'Name must be 50 characters or fewer.'
-  // Only letters, spaces, dots, hyphens, apostrophes allowed
-  if (/[^a-zA-Z\u0900-\u097F .'\\-]/.test(trimmed))
-    return 'Name can only contain letters, spaces, dots, hyphens or apostrophes.'
-  // Must start and end with a letter
-  if (!LETTER.test(trimmed[0]))
-    return 'Name must start with a letter.'
-  if (!LETTER.test(trimmed[trimmed.length - 1]))
-    return 'Name must end with a letter.'
-  // No consecutive special characters (e.g. "--", ". ", "-.")
-  if (/[ .'\\-]{2,}/.test(trimmed))
-    return 'Name cannot have consecutive spaces or special characters.'
-  // Must have at least 3 actual letters (not just 3 total chars)
-  const letterCount = (trimmed.match(/[a-zA-Z\u0900-\u097F]/g) ?? []).length
-  if (letterCount < 3)
-    return 'Name must contain at least 3 letters.'
-  return null
-}
-
 export default function StudentForm({ student, onClose }: StudentFormProps) {
-  const addStudent    = useStore((s) => s.addStudent)
-  const updateStudent = useStore((s) => s.updateStudent)
-  const students      = useStore((s) => s.students)
+  const addStudent    = useAppStore((s) => s.addStudent)
+  const updateStudent = useAppStore((s) => s.updateStudent)
+  const students      = useAppStore((s) => s.students)
   const { showToast } = useToast()
 
   const isEdit = !!student
@@ -140,11 +117,11 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
         />
         {nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
         {dupWarning && !nameError && (
-          <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-3 py-2">
-            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+          <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
+            <p className="text-xs text-amber-700 font-medium">
               A student named "{form.name.trim()}" already exists.
             </p>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+            <p className="text-xs text-amber-600 mt-0.5">
               Add a label below to tell them apart, or submit again to save anyway.
             </p>
           </div>
@@ -200,7 +177,7 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
               className={`flex-1 py-2 text-sm font-medium transition-colors ${
                 form.rateType === t
                   ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
               }`}
             >
               {t === 'hourly' ? 'Per Hour' : 'Per Month'}

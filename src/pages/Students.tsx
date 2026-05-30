@@ -4,10 +4,10 @@ import Header from '@components/shared/Header'
 import Modal from '@components/shared/Modal'
 import StudentCard from '@components/students/StudentCard'
 import StudentForm from '@components/students/StudentForm'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 
 export default function Students() {
-  const students = useStore((s) => s.students)
+  const students = useAppStore((s) => s.students)
   const [showAdd, setShowAdd] = useState(false)
   const [query,   setQuery]   = useState('')
 

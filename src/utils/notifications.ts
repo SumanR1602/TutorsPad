@@ -39,13 +39,13 @@ export function startReminderScheduler(timeStr: string, message: string): () => 
     const now = new Date()
     const todayKey = now.toDateString()
     const storageKey = `daily-reminder-${todayKey}`
-    if (sessionStorage.getItem(storageKey)) return
+    try { if (sessionStorage.getItem(storageKey)) return } catch { /* private browsing */ }
 
     const totalNow    = now.getHours() * 60 + now.getMinutes()
     const totalTarget = targetH * 60 + targetM
     // fire only at or after target, within a 2-minute catch-up window
     if (totalNow >= totalTarget && totalNow <= totalTarget + 2) {
-      sessionStorage.setItem(storageKey, '1')
+      try { sessionStorage.setItem(storageKey, '1') } catch { /* private browsing */ }
       void showNotification('TutorsPad – Daily Reminder', message)
     }
   }
@@ -90,8 +90,10 @@ export function startPerStudentReminders(
       const totalNow    = h * 60 + m
       const totalTarget = targetH * 60 + targetM
       // fire only at or after target, within a 2-minute catch-up window
-      if (totalNow >= totalTarget && totalNow <= totalTarget + 2 && !sessionStorage.getItem(storageKey)) {
-        sessionStorage.setItem(storageKey, '1')
+      let alreadyFired = false
+      try { alreadyFired = !!sessionStorage.getItem(storageKey) } catch { /* private browsing */ }
+      if (totalNow >= totalTarget && totalNow <= totalTarget + 2 && !alreadyFired) {
+        try { sessionStorage.setItem(storageKey, '1') } catch { /* private browsing */ }
         onReminder(student.id)
         if (Notification.permission === 'granted') {
           void showNotification(

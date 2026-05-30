@@ -4,40 +4,14 @@
  * Uses useStore.getState() directly instead of receiving store as parameter.
  */
 import ExcelJS from 'exceljs'
-import useStore from '@store/useStore'
-import { applyBoldStyle } from './excelUtils'
+import useAppStore from '@store/useStore'
+import { applyBoldStyle, addSheetHeader } from './excel'
 import { DEFAULT_CURRENCY } from '@constants'
 import { TIMEZONE_OPTIONS } from './timezone'
 import type { Student, Session, Payment, Settings } from '@/types'
 
 function tzLabel(ianaValue: string): string {
   return TIMEZONE_OPTIONS.find((o) => o.value === ianaValue)?.label ?? ianaValue
-}
-
-function addSheetHeader(
-  sheet: ExcelJS.Worksheet,
-  sectionLabel: string,
-  colCount: number,
-): void {
-  const lastCol = String.fromCharCode(64 + colCount) // A=1, B=2, ...
-
-  sheet.addRow(Array(colCount).fill(''))
-  sheet.mergeCells(`A1:${lastCol}1`)
-  const titleCell = sheet.getCell('A1')
-  titleCell.value = 'TUTORSPAD'
-  titleCell.font = { bold: true, size: 16 }
-  titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getRow(1).height = 32
-
-  sheet.addRow(Array(colCount).fill(''))
-  sheet.mergeCells(`A2:${lastCol}2`)
-  const sectionCell = sheet.getCell('A2')
-  sectionCell.value = sectionLabel
-  sectionCell.font = { bold: true, size: 13 }
-  sectionCell.alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getRow(2).height = 24
-
-  sheet.addRow([])
 }
 
 // ── JSON backup ───────────────────────────────────────────────────────────────
@@ -51,7 +25,7 @@ interface BackupFile {
 }
 
 export function exportBackupJSON(): void {
-  const { students, sessions, payments } = useStore.getState()
+  const { students, sessions, payments } = useAppStore.getState()
   const backup: BackupFile = {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -59,13 +33,18 @@ export function exportBackupJSON(): void {
     sessions,
     payments,
   }
-  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href     = url
-  a.download = `tutorspad-backup-${new Date().toISOString().slice(0, 10)}.json`
-  a.click()
-  URL.revokeObjectURL(url)
+  try {
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `tutorspad-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  } catch (err) {
+    console.error('Backup export failed:', err)
+    alert('Export failed. Please try again.')
+  }
 }
 
 export interface ParsedBackup {
@@ -110,7 +89,7 @@ export async function parseBackupJSON(file: File): Promise<ParsedBackup> {
 }
 
 export async function exportAllData(): Promise<void> {
-  const { students, sessions, payments, settings } = useStore.getState()
+  const { students, sessions, payments, settings } = useAppStore.getState()
   const studentMap: Record<string, string> = Object.fromEntries(
     students.map((s) => [s.id, s.name]),
   )
@@ -205,15 +184,20 @@ export async function exportAllData(): Promise<void> {
   settingsSheet.addRow({ k: 'Theme',               v: s.theme ?? 'system' })
   settingsSheet.addRow({ k: 'Exported At',         v: new Date().toISOString() })
 
-  const buffer = await wb.xlsx.writeBuffer()
-  const blob = new Blob(
-    [buffer],
-    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
-  )
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `tutorspad-backup-${new Date().toISOString().slice(0, 10)}.xlsx`
-  a.click()
-  URL.revokeObjectURL(url)
+  try {
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob(
+      [buffer],
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tutorspad-backup-${new Date().toISOString().slice(0, 10)}.xlsx`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+  } catch (err) {
+    console.error('Excel export failed:', err)
+    alert('Export failed. Please try again.')
+  }
 }

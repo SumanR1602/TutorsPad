@@ -18,7 +18,7 @@ export default function FilterPanel({ students, sessions, filters, onChange, onC
   const hasFilters = filters.studentId !== 'all' || !!filters.dateFrom || !!filters.dateTo
 
   return (
-    <div className="mx-4 mb-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3 shadow-sm">
+    <div className="mx-4 mb-3 rounded-2xl border border-gray-200 bg-white p-4 space-y-3 shadow-sm">
       {students.length > 1 && (
         <div>
           <label className="label mb-1">Student</label>
@@ -58,7 +58,7 @@ export default function FilterPanel({ students, sessions, filters, onChange, onC
       {hasFilters && (
         <button
           onClick={onClear}
-          className="w-full py-2 text-xs font-medium text-red-500 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="w-full py-2 text-xs font-medium text-red-500 border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
         >
           Clear filters
         </button>

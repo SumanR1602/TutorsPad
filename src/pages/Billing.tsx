@@ -3,7 +3,8 @@ import { Plus, Download, ChevronDown, ChevronUp, FileText, FileSpreadsheet, Cale
 import Header from '@components/shared/Header'
 import Modal from '@components/shared/Modal'
 import PaymentEntry from '@components/billing/PaymentEntry'
-import useStore from '@store/useStore'
+import StudentAvatar from '@components/shared/StudentAvatar'
+import useAppStore from '@store/useStore'
 import { formatCurrency, getMonthlyBreakdown } from '@utils/billing'
 import { exportToExcel, exportAllStudentsSummaryExcel } from '@utils/billingExcel'
 import { openInvoicePDF } from '@utils/billingInvoice'
@@ -14,13 +15,13 @@ interface InvModal { student: Student; dateFrom: string; dateTo: string }
 interface RcptModal { student: Student }
 
 export default function Billing() {
-  const students    = useStore((s) => s.students)
-  const sessions    = useStore((s) => s.sessions)
-  const payments    = useStore((s) => s.payments)
-  const settings    = useStore((s) => s.settings)
-  const getTotalDue = useStore((s) => s.getTotalDue)
-  const getTotalPaid= useStore((s) => s.getTotalPaid)
-  const getBalance  = useStore((s) => s.getBalance)
+  const students    = useAppStore((s) => s.students)
+  const sessions    = useAppStore((s) => s.sessions)
+  const payments    = useAppStore((s) => s.payments)
+  const settings    = useAppStore((s) => s.settings)
+  const getTotalDue = useAppStore((s) => s.getTotalDue)
+  const getTotalPaid= useAppStore((s) => s.getTotalPaid)
+  const getBalance  = useAppStore((s) => s.getBalance)
 
   const [showPayment,     setShowPayment]     = useState(false)
   const [expandedMonths,  setExpandedMonths]  = useState<Record<string, boolean>>({})
@@ -81,7 +82,7 @@ export default function Billing() {
             {students.length > 0 && (
               <button
                 onClick={handleSummaryExcel}
-                className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 border border-gray-200 dark:border-gray-600 rounded-xl px-2.5 py-2 transition-colors dark:hover:text-indigo-400"
+                className="flex items-center gap-1 text-xs text-gray-500 hover:text-indigo-600 border border-gray-200 rounded-xl px-2.5 py-2 transition-colors"
                 title="Export all students summary as Excel"
               >
                 <FileSpreadsheet size={14} /> All Excel
@@ -105,21 +106,16 @@ export default function Billing() {
             const due     = getTotalDue(student.id)
             const paid    = getTotalPaid(student.id)
             const balance = getBalance(student.id)
-            const ss      = sessions.filter((s) => s.studentId === student.id)
-            const ps      = payments.filter((p) => p.studentId === student.id)
-            const monthly = getMonthlyBreakdown(ss, ps, student.ratePerHour, student.rateType ?? 'hourly')
+            const studentSessions = sessions.filter((s) => s.studentId === student.id)
+            const studentPayments  = payments.filter((p) => p.studentId === student.id)
+            const monthly = getMonthlyBreakdown(studentSessions, studentPayments, student.ratePerHour, student.rateType ?? 'hourly')
 
             return (
               <div key={student.id} className="card space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold"
-                      style={{ backgroundColor: student.color ?? '#6366f1' }}
-                    >
-                      {student.name.charAt(0)}
-                    </div>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{student.name}</span>
+                    <StudentAvatar name={student.name} color={student.color ?? '#6366f1'} size="sm" />
+                    <span className="font-semibold text-gray-900 text-sm">{student.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -141,7 +137,7 @@ export default function Billing() {
                     >
                       <FileText size={13} /> Invoice
                     </button>
-                    <span className="text-gray-200 dark:text-gray-600 select-none">|</span>
+                    <span className="text-gray-200 select-none">|</span>
                     <button
                       onClick={() => setRcptModal({ student })}
                       className="flex items-center gap-1 text-xs text-gray-400 hover:text-green-600 transition-colors"
@@ -149,7 +145,7 @@ export default function Billing() {
                     >
                       <Receipt size={13} /> Receipt
                     </button>
-                    <span className="text-gray-200 dark:text-gray-600 select-none">|</span>
+                    <span className="text-gray-200 select-none">|</span>
                     <button
                       onClick={() => handleExportExcel(student)}
                       className="flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 transition-colors"
@@ -161,22 +157,22 @@ export default function Billing() {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-2.5 text-center">
+                  <div className="bg-gray-50 rounded-xl p-2.5 text-center">
                     <p className="text-[10px] text-gray-400">Total due</p>
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{formatCurrency(due, student.currency)}</p>
-                    <p className="text-[9px] text-gray-300 dark:text-gray-600 mt-0.5">all time</p>
+                    <p className="text-xs font-semibold text-gray-800">{formatCurrency(due, student.currency)}</p>
+                    <p className="text-[9px] text-gray-300 mt-0.5">all time</p>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-2.5 text-center">
+                  <div className="bg-green-50 rounded-xl p-2.5 text-center">
                     <p className="text-[10px] text-gray-400">Received</p>
-                    <p className="text-xs font-semibold text-green-700 dark:text-green-400">{formatCurrency(paid, student.currency)}</p>
-                    <p className="text-[9px] text-gray-300 dark:text-gray-600 mt-0.5">all time</p>
+                    <p className="text-xs font-semibold text-green-700">{formatCurrency(paid, student.currency)}</p>
+                    <p className="text-[9px] text-gray-300 mt-0.5">all time</p>
                   </div>
-                  <div className={`rounded-xl p-2.5 text-center ${balance > 0 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+                  <div className={`rounded-xl p-2.5 text-center ${balance > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
                     <p className="text-[10px] text-gray-400">Pending</p>
                     <p className={`text-xs font-semibold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                       {formatCurrency(balance, student.currency)}
                     </p>
-                    <p className="text-[9px] text-gray-300 dark:text-gray-600 mt-0.5">all time</p>
+                    <p className="text-[9px] text-gray-300 mt-0.5">all time</p>
                   </div>
                 </div>
 
@@ -186,7 +182,7 @@ export default function Billing() {
                     <div className="space-y-1.5">
                       {(expandedMonths[student.id] ? monthly : monthly.slice(0, 3)).map((m) => (
                         <div key={m.key} className="flex items-center justify-between text-xs">
-                          <span className="text-gray-600 dark:text-gray-300">{m.month}</span>
+                          <span className="text-gray-600">{m.month}</span>
                           <div className="flex items-center gap-3">
                             <span className="text-gray-400">{m.hours}h</span>
                             <span className={m.balance > 0 ? 'text-red-500' : 'text-green-600'}>
@@ -246,10 +242,10 @@ export default function Billing() {
                     <button
                       key={p.id}
                       onClick={() => generateReceipt(p)}
-                      className="w-full flex items-center justify-between rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 hover:bg-green-50 dark:hover:bg-green-900/20 hover:border-green-200 dark:hover:border-green-800 px-4 py-3 transition-colors text-left group"
+                      className="w-full flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 hover:bg-green-50 hover:border-green-200 px-4 py-3 transition-colors text-left group"
                     >
                       <div>
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400">
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700">
                           {formatCurrency(p.amount, rcptModal.student.currency)}
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5">{p.date}</p>

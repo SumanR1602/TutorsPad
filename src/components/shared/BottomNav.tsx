@@ -19,7 +19,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-50 dark:bg-gray-800 dark:border-gray-700"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-50"
     >
       {navItems.map(({ to, icon: Icon, label }) => (
         <NavLink

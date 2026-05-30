@@ -15,7 +15,7 @@ function to24h(hour: number | string, minute: number | string, period: string): 
 }
 
 const selectCls =
-  'bg-transparent border-none outline-none text-center text-base font-semibold text-gray-800 dark:text-gray-100 py-2.5 cursor-pointer appearance-none [-webkit-appearance:none]'
+  'bg-transparent border-none outline-none text-center text-base font-semibold text-gray-800 py-2.5 cursor-pointer appearance-none [-webkit-appearance:none]'
 
 interface TimePicker12hProps {
   value: string
@@ -27,7 +27,7 @@ export default function TimePicker12h({ value, onChange }: TimePicker12hProps) {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="flex items-center flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden dark:bg-gray-700 dark:border-gray-600">
+      <div className="flex items-center flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden">
         <select
           value={hour}
           onChange={(e) => onChange(to24h(e.target.value, minute, period))}
@@ -38,7 +38,7 @@ export default function TimePicker12h({ value, onChange }: TimePicker12hProps) {
           ))}
         </select>
 
-        <span className="text-gray-300 dark:text-gray-500 font-bold text-lg select-none pointer-events-none">:</span>
+        <span className="text-gray-300 font-bold text-lg select-none pointer-events-none">:</span>
 
         <select
           value={minute}
@@ -51,7 +51,7 @@ export default function TimePicker12h({ value, onChange }: TimePicker12hProps) {
         </select>
       </div>
 
-      <div className="flex rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden shrink-0">
+      <div className="flex rounded-xl border border-gray-200 overflow-hidden shrink-0">
         {(['AM', 'PM'] as const).map((p) => (
           <button
             key={p}
@@ -60,7 +60,7 @@ export default function TimePicker12h({ value, onChange }: TimePicker12hProps) {
             className={`px-4 py-2.5 text-sm font-semibold transition-colors ${
               period === p
                 ? 'bg-primary-600 text-white'
-                : 'bg-white dark:bg-gray-700 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600'
+                : 'bg-white text-gray-400 hover:bg-gray-50'
             }`}
           >
             {p}

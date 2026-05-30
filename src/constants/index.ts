@@ -12,7 +12,8 @@ export const CURRENCIES: { value: string; label: string }[] = [
   // Add more currencies here when needed
 ]
 
-export const DEFAULT_TIMEZONE = 'Asia/Kolkata'
+export const TEACHER_TIMEZONE = 'Asia/Kolkata'
+export const DEFAULT_TIMEZONE  = TEACHER_TIMEZONE
 export const DEFAULT_CURRENCY = 'INR'
 export const DEFAULT_RATE_TYPE = 'hourly' as const
 export const STORE_NAME = 'tutorspad-store'

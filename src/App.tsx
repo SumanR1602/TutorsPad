@@ -6,34 +6,18 @@ import Students from './pages/Students'
 import Sessions from './pages/Sessions'
 import Billing from './pages/Billing'
 import Settings from './pages/Settings'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { startReminderScheduler, startPerStudentReminders } from '@utils/notifications'
 import { ToastProvider } from '@hooks/useToast'
 import OnboardingModal from '@components/shared/OnboardingModal'
 
 export default function App() {
-  const settings           = useStore((s) => s.settings)
-  const students           = useStore((s) => s.students)
-  const addPendingReminder = useStore((s) => s.addPendingReminder)
+  const settings           = useAppStore((s) => s.settings)
+  const students           = useAppStore((s) => s.students)
+  const addPendingReminder = useAppStore((s) => s.addPendingReminder)
 
   const globalCleanupRef:     React.MutableRefObject<(() => void) | null> = useRef(null)
   const perStudentCleanupRef: React.MutableRefObject<(() => void) | null> = useRef(null)
-
-  // Dark mode
-  useEffect(() => {
-    const html  = document.documentElement
-    const theme = settings.theme ?? 'system'
-    if (theme === 'dark') { html.classList.add('dark'); return }
-    if (theme === 'light') { html.classList.remove('dark'); return }
-    const mq    = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = (e: MediaQueryListEvent | MediaQueryList) => {
-      if (e.matches) html.classList.add('dark')
-      else html.classList.remove('dark')
-    }
-    apply(mq)
-    mq.addEventListener('change', apply)
-    return () => mq.removeEventListener('change', apply)
-  }, [settings.theme])
 
   // Global daily reminder
   useEffect(() => {

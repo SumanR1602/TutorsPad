@@ -6,27 +6,8 @@
 import ExcelJS from 'exceljs'
 import { formatDate, getMonthlyBreakdown } from './billing'
 import { DEFAULT_CURRENCY } from '@constants'
-import { applyBoldStyle } from './excelUtils'
+import { applyBoldStyle, addSheetHeader } from './excel'
 import type { Student, Session, Payment } from '@/types'
-
-function addSheetHeader(sheet: ExcelJS.Worksheet, sectionLabel: string, colCount: number): void {
-  const lastCol = String.fromCharCode(64 + colCount)
-  sheet.addRow(Array(colCount).fill(''))
-  sheet.mergeCells(`A1:${lastCol}1`)
-  const titleCell = sheet.getCell('A1')
-  titleCell.value = 'TUTORSPAD'
-  titleCell.font = { bold: true, size: 16 }
-  titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getRow(1).height = 32
-  sheet.addRow(Array(colCount).fill(''))
-  sheet.mergeCells(`A2:${lastCol}2`)
-  const sectionCell = sheet.getCell('A2')
-  sectionCell.value = sectionLabel
-  sectionCell.font = { bold: true, size: 13 }
-  sectionCell.alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getRow(2).height = 24
-  sheet.addRow([])
-}
 
 async function downloadWorkbook(wb: ExcelJS.Workbook, filename: string): Promise<void> {
   const buffer = await wb.xlsx.writeBuffer()

@@ -125,19 +125,6 @@ src/
 └── constants/        # Colors, currencies, app-wide defaults
 ```
 
----
-
-## Deploying
-
-TutorsPad is a fully static PWA — no server or environment variables required.
-
-1. Push to GitHub
-2. Import repo at [vercel.com](https://vercel.com) → **Add New Project**
-3. Vercel auto-detects Vite — just click **Deploy**
-
-Every push to `main` deploys automatically.
-
----
 
 ## License
 

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Clock, RotateCcw } from 'lucide-react'
-import useStore from '@store/useStore'
+import useAppStore from '@store/useStore'
 import { convertISTtoTZ, getCurrentTimeInTZ, isReasonableHour } from '@utils/timezone'
+import { TEACHER_TIMEZONE } from '@constants'
 import TimePicker12h from '../shared/TimePicker12h'
-
-const TEACHER_TZ = 'Asia/Kolkata'
 
 function getNowIST(): string {
   const now = new Date()
@@ -12,13 +11,13 @@ function getNowIST(): string {
 }
 
 export default function TimezoneConverter() {
-  const students = useStore((s) => s.students)
+  const students = useAppStore((s) => s.students)
   const [istTime, setIstTime] = useState<string>(getNowIST)
 
   // Tick every second to keep "Current IST" display live
-  const [nowIST, setNowIST] = useState(() => getCurrentTimeInTZ(TEACHER_TZ))
+  const [nowIST, setNowIST] = useState(() => getCurrentTimeInTZ(TEACHER_TIMEZONE))
   useEffect(() => {
-    const id = setInterval(() => setNowIST(getCurrentTimeInTZ(TEACHER_TZ)), 1_000)
+    const id = setInterval(() => setNowIST(getCurrentTimeInTZ(TEACHER_TIMEZONE)), 1_000)
     return () => clearInterval(id)
   }, [])
 
@@ -53,8 +52,8 @@ export default function TimezoneConverter() {
       ) : (
         <div className="space-y-2">
           {students.map((student) => {
-            const result = convertISTtoTZ(istTime, student.timezone)
-            const ok     = isReasonableHour(istTime, student.timezone)
+            const result          = convertISTtoTZ(istTime, student.timezone)
+            const isReasonableTime = isReasonableHour(istTime, student.timezone)
             return (
               <div
                 key={student.id}
@@ -74,7 +73,7 @@ export default function TimezoneConverter() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">{result.time}</p>
-                  {!ok && (
+                  {!isReasonableTime && (
                     <span className="text-[10px] text-amber-600">⚠ Odd hours</span>
                   )}
                 </div>

@@ -8,14 +8,14 @@ import { buildInvoiceHTML } from './templates/billingInvoiceTemplate'
 import { DEFAULT_CURRENCY } from '@constants'
 import type { Student, Session, Payment } from '@/types'
 
-export function openInvoicePDF(
+export async function openInvoicePDF(
   student: Student,
   sessions: Session[],
   payments: Payment[],
   teacherName: string = 'Teacher',
   dateFrom: string = '',
   dateTo: string = '',
-): void {
+): Promise<void> {
   const currency    = student.currency ?? DEFAULT_CURRENCY
   const isMonthly   = (student.rateType ?? 'hourly') === 'monthly'
   const formatValue = (n: number) => formatCurrency(n, currency)
@@ -111,5 +111,5 @@ export function openInvoicePDF(
   })
 
   const safeName = student.name.replace(/[^a-zA-Z0-9]/g, '-')
-  openPDFWindow(html, `Invoice_${safeName}_${invNo}`)
+  await openPDFWindow(html, `Invoice_${safeName}_${invNo}`)
 }
