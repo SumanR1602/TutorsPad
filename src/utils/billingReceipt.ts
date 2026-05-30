@@ -123,5 +123,5 @@ export async function openReceiptPDF(
   // ── 9. Open tab + auto-download ──────────────────────────────────────
   const safeName = student.name.replace(/[^a-zA-Z0-9]/g, '-')
   const filename = `Receipt_${safeName}_${payment.date}_${recNo}`
-  await openPDFWindow(html, filename)
+  openPDFWindow(html, filename)
 }

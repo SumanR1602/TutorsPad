@@ -111,5 +111,5 @@ export async function openInvoicePDF(
   })
 
   const safeName = student.name.replace(/[^a-zA-Z0-9]/g, '-')
-  await openPDFWindow(html, `Invoice_${safeName}_${invNo}`)
+  openPDFWindow(html, `Invoice_${safeName}_${invNo}`)
 }

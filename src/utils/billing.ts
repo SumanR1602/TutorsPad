@@ -81,33 +81,9 @@ export function formatCurrency(amount: number, currency: string = DEFAULT_CURREN
 
 /**
  * Generate PDF via the /api/pdf serverless function (Puppeteer on Vercel).
- * Falls back to window.print() if the API is unavailable.
+ * Always opens a preview tab. The "Save as PDF" button inside the tab handles the download.
  */
-export async function openPDFWindow(html: string, filename: string): Promise<void> {
-  try {
-    const res = await fetch('/api/pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ html, filename }),
-    })
-
-    if (res.ok) {
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${filename}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      setTimeout(() => URL.revokeObjectURL(url), 10_000)
-      return
-    }
-  } catch {
-    // API unavailable — fall through to print fallback
-  }
-
-  // Fallback: open in new tab and auto-trigger print dialog
+export function openPDFWindow(html: string, _filename: string): void {
   const w = window.open('', '_blank')
   if (w) {
     w.document.write(html)

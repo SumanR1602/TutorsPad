@@ -165,11 +165,30 @@ export function buildInvoiceHTML({
     }
   </style>
   <script>
-    function dlPDF() { window.print(); }
-    window.addEventListener('load', function() {
-      // Short delay lets fonts render before the print dialog opens
-      setTimeout(function() { window.print(); }, 600);
-    });
+    async function dlPDF() {
+      var btn = document.querySelector('.print-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+      try {
+        var res = await fetch('/api/pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html: document.documentElement.outerHTML, filename: document.title })
+        });
+        if (res.ok) {
+          var blob = await res.blob();
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url; a.download = document.title + '.pdf';
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(function() { URL.revokeObjectURL(url), 10000; });
+          if (btn) { btn.disabled = false; btn.innerHTML = '\u2713 Downloaded'; }
+          return;
+        }
+      } catch (e) {}
+      // Fallback: browser print dialog
+      window.print();
+      if (btn) { btn.disabled = false; btn.textContent = 'Save as PDF'; }
+    }
   <\/script>
 </head>
 <body>
