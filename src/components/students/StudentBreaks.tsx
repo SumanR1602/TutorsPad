@@ -8,7 +8,7 @@ import useAppStore from '@store/useStore'
 import { useToast } from '@hooks/useToast'
 import ConfirmModal from '../shared/ConfirmModal'
 import {
-  getBillingCycles, findOverlappingBreaks, isRangeFullyCovered,
+  getBillingCycles, findOverlappingBreaks, isRangeFullyCovered, getRateAt,
 } from '@utils/billingCore'
 import { todayISO, formatDayMonth, daysInclusive, addMonthsClamped } from '@utils/date'
 import type { Student } from '@/types'
@@ -32,7 +32,7 @@ export default function StudentBreaks({ student }: StudentBreaksProps) {
   const [error, setError] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
 
-  const isMonthly = (student.rateType ?? 'hourly') === 'monthly'
+  const isMonthly = getRateAt(student, today).rateType === 'monthly'
 
   const myBreaks = useMemo(
     () => breaks

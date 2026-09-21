@@ -14,18 +14,18 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
   // so the heading id must be unique or aria-labelledby points at the wrong one.
   const titleId = useId()
 
+  // Callers pass an inline arrow for onClose, so its identity changes every
+  // render. Reading it through a ref keeps the effects below from re-running
+  // on each keystroke and stealing focus back out of whatever is being typed.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!isOpen) return
-    // Close on Escape
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     document.addEventListener('keydown', onKey)
-    // Focus first focusable element inside modal
-    const firstFocusable = panelRef.current?.querySelector<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
-    firstFocusable?.focus()
 
     // Stop the page behind the sheet from scrolling with it.
     const previousOverflow = document.body.style.overflow
@@ -35,7 +35,15 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = previousOverflow
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
+
+  // Autofocus belongs to opening the modal, not to every re-render of it.
+  useEffect(() => {
+    if (!isOpen) return
+    panelRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )?.focus()
+  }, [isOpen])
 
   if (!isOpen) return null
 

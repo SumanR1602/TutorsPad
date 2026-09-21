@@ -122,3 +122,17 @@ export function formatMonthShort(ym: string): string {
     timeZone: 'UTC',
   })
 }
+
+/**
+ * A length of teaching time, as "1h 20m" / "2h" / "45m".
+ * Durations are entered in minutes but stored in hours, where they rarely
+ * divide cleanly (80 min = 1.333…h), so they're read back in clock terms.
+ */
+export function formatDuration(hours: number): string {
+  if (!Number.isFinite(hours) || hours <= 0) return '0m'
+  const totalMins = Math.round(hours * 60)
+  const h = Math.floor(totalMins / 60)
+  const m = totalMins % 60
+  if (!h) return `${m}m`
+  return m ? `${h}h ${m}m` : `${h}h`
+}

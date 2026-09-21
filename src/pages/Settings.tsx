@@ -88,6 +88,8 @@ export default function Settings() {
       pendingImport.sessions,
       pendingImport.payments,
       pendingImport.breaks,
+      pendingImport.invoices,
+      pendingImport.receipts,
     )
     setPendingImport(null)
     showToast('Data restored from backup', 'success')

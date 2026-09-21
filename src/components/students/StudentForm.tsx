@@ -13,6 +13,7 @@ import TimePicker12h from '../shared/TimePicker12h'
 import { useToast } from '@hooks/useToast'
 import { validateName } from '@utils/validators'
 import { todayISO, addDays, addMonthsClamped, formatDayMonth } from '@utils/date'
+import { getBillingCycles, findCycleForDate, getRateAt } from '@utils/billingCore'
 import { COLORS, CURRENCIES, DEFAULT_TIMEZONE, DEFAULT_CURRENCY, DEFAULT_RATE_TYPE } from '@constants'
 import type { Student } from '@/types'
 
@@ -28,13 +29,14 @@ interface StudentFormState {
   label: string
   billingAnchorDate: string
   endDate: string
+  rateEffectiveFrom: string
 }
 
 const defaultForm: StudentFormState = {
   name: '', city: '', timezone: DEFAULT_TIMEZONE,
   rateType: DEFAULT_RATE_TYPE, ratePerHour: '', currency: DEFAULT_CURRENCY,
   color: COLORS[0], scheduledTime: '', label: '',
-  billingAnchorDate: todayISO(), endDate: '',
+  billingAnchorDate: todayISO(), endDate: '', rateEffectiveFrom: todayISO(),
 }
 
 interface StudentFormProps {
@@ -47,14 +49,21 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
   const updateStudent = useAppStore((s) => s.updateStudent)
   const students      = useAppStore((s) => s.students)
   const sessions      = useAppStore((s) => s.sessions)
+  const breaks        = useAppStore((s) => s.breaks)
   const { showToast } = useToast()
 
   const isEdit = !!student
+  const today  = todayISO()
 
-  const [nameError,    setNameError]    = useState<string | null>(null)
-  const [rateError,    setRateError]    = useState<string | null>(null)
-  const [anchorError,  setAnchorError]  = useState<string | null>(null)
-  const [dupWarning,   setDupWarning]   = useState(false)
+  // The plan in force today, which is what the form edits — `student.rateType`
+  // and `student.ratePerHour` can lag it once a scheduled change comes due.
+  const activeRate = student ? getRateAt(student, today) : null
+
+  const [nameError,        setNameError]        = useState<string | null>(null)
+  const [rateError,        setRateError]        = useState<string | null>(null)
+  const [anchorError,      setAnchorError]      = useState<string | null>(null)
+  const [effectiveError,   setEffectiveError]   = useState<string | null>(null)
+  const [dupWarning,       setDupWarning]       = useState(false)
 
   const [form, setForm] = useState<StudentFormState>(
     isEdit
@@ -62,24 +71,40 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
           name:          student.name,
           city:          student.city ?? '',
           timezone:      student.timezone,
-          rateType:      (student.rateType ?? 'hourly') as 'hourly' | 'monthly',
-          ratePerHour:   String(student.ratePerHour),
+          rateType:      activeRate!.rateType as 'hourly' | 'monthly',
+          ratePerHour:   String(activeRate!.ratePerHour),
           currency:      student.currency ?? DEFAULT_CURRENCY,
           color:         student.color ?? COLORS[0],
           scheduledTime: student.scheduledTime ?? '',
           label:         student.label ?? '',
           billingAnchorDate: student.billingAnchorDate ?? (student.createdAt ?? '').slice(0, 10),
           endDate:       student.endDate ?? '',
+          rateEffectiveFrom: today,
         }
       : defaultForm,
   )
 
-  const rateChanged = isEdit && parseFloat(form.ratePerHour) !== student.ratePerHour
+  const rateChanged = !!activeRate && parseFloat(form.ratePerHour) !== activeRate.ratePerHour
+  const typeChanged = !!activeRate && form.rateType !== activeRate.rateType
+  const rateOrTypeChanged = rateChanged || typeChanged
 
-  const today = todayISO()
   /** A year ahead is generous for onboarding; beyond that it's a typo. */
   const maxAnchor = addMonthsClamped(today, 12)
   const anchorIsFuture = form.billingAnchorDate > today
+
+  /**
+   * The earliest date a rate/type change can take effect without touching
+   * an already-closed cycle — the start of whichever cycle "today" falls in.
+   * Backdating within that window only edits the still-open cycle; anything
+   * earlier would rewrite a cycle that's already been billed.
+   */
+  const minRateEffectiveDate = useMemo(() => {
+    if (!isEdit) return today
+    const cycles = getBillingCycles(student, sessions, breaks, today)
+    return findCycleForDate(cycles, today)?.start ?? today
+  }, [isEdit, student, sessions, breaks, today])
+
+  const maxRateEffectiveDate = addMonthsClamped(today, 12)
 
   /** Moving the anchor forward past existing sessions would unbill them. */
   const earliestSession = useMemo(() => {
@@ -119,6 +144,28 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
     }
     setRateError(null)
 
+    // Effective-date validation — only matters when the rate or type is
+    // actually changing, and only in edit mode (a new student's first rate
+    // is just its opening rate, not a "change").
+    if (isEdit && rateOrTypeChanged) {
+      if (!form.rateEffectiveFrom) {
+        setEffectiveError('Pick a date this change takes effect.')
+        return
+      }
+      if (form.rateEffectiveFrom < minRateEffectiveDate) {
+        setEffectiveError(
+          `Can't apply before ${formatDayMonth(minRateEffectiveDate)} — that would change a cycle ` +
+          'that has already closed.',
+        )
+        return
+      }
+      if (form.rateEffectiveFrom > maxRateEffectiveDate) {
+        setEffectiveError('That\'s too far in the future — check the date.')
+        return
+      }
+    }
+    setEffectiveError(null)
+
     // Anchor validation — moving it forward past existing sessions would take
     // them out of every cycle, so their charges would silently disappear.
     if (!form.billingAnchorDate) {
@@ -150,15 +197,16 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
     }
     setDupWarning(false)
 
+    const { rateEffectiveFrom, ...formRest } = form
     const data = {
-      ...form,
+      ...formRest,
       name: trimmedName,
       ratePerHour: rate,
       billingAnchorDate: form.billingAnchorDate || todayISO(),
       endDate: form.endDate || undefined,
     }
     if (isEdit) {
-      updateStudent(student.id, data)
+      updateStudent(student.id, data, rateOrTypeChanged ? rateEffectiveFrom : undefined)
       showToast(`${trimmedName} updated`, 'success')
     } else {
       addStudent(data)
@@ -237,31 +285,22 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
       {/* Rate type toggle + rate + currency */}
       <div>
         <label className="label">Rate type *</label>
-        {isEdit ? (
-          <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-            {form.rateType === 'monthly' ? 'Per Month' : 'Per Hour'}
-            <span className="block text-xs text-gray-400 mt-0.5">
-              Fixed at signup — a student can't switch billing type later.
-            </span>
-          </div>
-        ) : (
-          <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-3">
-            {(['hourly', 'monthly'] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setForm({ ...form, rateType: t })}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
-                  form.rateType === t
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                {t === 'hourly' ? 'Per Hour' : 'Per Month'}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex rounded-xl overflow-hidden border border-gray-200 mb-3">
+          {(['hourly', 'monthly'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setForm({ ...form, rateType: t })}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                form.rateType === t
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              {t === 'hourly' ? 'Per Hour' : 'Per Month'}
+            </button>
+          ))}
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -295,11 +334,38 @@ export default function StudentForm({ student, onClose }: StudentFormProps) {
 
         {rateError && <p className="text-xs text-red-500 mt-1">{rateError}</p>}
 
-        {rateChanged && (
+        {isEdit && rateOrTypeChanged && (
+          <div className="mt-3">
+            <label className="label">Effective from *</label>
+            <input
+              type="date"
+              className={`input ${effectiveError ? 'border-red-400 focus:ring-red-400' : ''}`}
+              value={form.rateEffectiveFrom}
+              min={minRateEffectiveDate}
+              max={maxRateEffectiveDate}
+              onChange={(e) => { setForm({ ...form, rateEffectiveFrom: e.target.value }); setEffectiveError(null) }}
+              required
+            />
+            {effectiveError && <p className="text-xs text-red-500 mt-1">{effectiveError}</p>}
+          </div>
+        )}
+
+        {typeChanged ? (
+          <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-xs text-amber-700">
+              {activeRate?.rateType === 'monthly'
+                ? `Switching to hourly closes the monthly cycle on ${formatDayMonth(form.rateEffectiveFrom)}. ` +
+                  'It still bills in full for its agreed rate, even though it ends a few days early. ' +
+                  'Hourly billing starts fresh from that date.'
+                : `Switching to monthly starts a fresh billing cycle on ${formatDayMonth(form.rateEffectiveFrom)}. ` +
+                  'Hours already logged stay billed as hourly — nothing already charged changes.'}
+            </p>
+          </div>
+        ) : rateChanged && (
           <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2">
             <p className="text-xs text-indigo-700">
-              The new rate applies from the next cycle onward. Cycles already billed keep
-              the price they were charged at.
+              The new rate applies from {formatDayMonth(form.rateEffectiveFrom)} onward. Cycles
+              already billed keep the price they were charged at.
             </p>
           </div>
         )}

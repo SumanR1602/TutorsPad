@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import useAppStore from '@store/useStore'
 import { formatDate } from '@utils/billing'
 import { getStudentLedger, findCycleForDate } from '@utils/billingCore'
-import { formatDayMonth } from '@utils/date'
+import { formatDayMonth, formatDuration } from '@utils/date'
 import { Trash2, BookOpen } from 'lucide-react'
 import { useToast } from '@hooks/useToast'
 import ConfirmModal from '../shared/ConfirmModal'
@@ -16,6 +16,7 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
   const allSessions   = useAppStore((s) => s.sessions)
   const payments      = useAppStore((s) => s.payments)
   const breaks        = useAppStore((s) => s.breaks)
+  const invoices      = useAppStore((s) => s.invoices)
   const deleteSession = useAppStore((s) => s.deleteSession)
   const { showToast } = useToast()
 
@@ -27,8 +28,8 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
   )
 
   const ledger = useMemo(
-    () => getStudentLedger(student, allSessions, payments, breaks),
-    [student, allSessions, payments, breaks],
+    () => getStudentLedger(student, allSessions, payments, breaks, undefined, invoices),
+    [student, allSessions, payments, breaks, invoices],
   )
 
   const totalHours = sessions.reduce((sum, s) => sum + s.hours, 0)
@@ -56,7 +57,7 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-indigo-50 rounded-xl p-3 text-center">
-          <p className="text-lg font-bold text-indigo-700">{totalHours.toFixed(1)}h</p>
+          <p className="text-lg font-bold text-indigo-700">{formatDuration(totalHours)}</p>
           <p className="text-[10px] text-indigo-400 mt-0.5">Total hours</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 text-center">
@@ -70,7 +71,7 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5">
           <p className="text-xs text-amber-800 leading-snug">
             {ledger.unbilled.length} session{ledger.unbilled.length !== 1 ? 's fall' : ' falls'} outside
-            {' '}{student.name}'s billing period ({billedHours.toFixed(1)}h of {totalHours.toFixed(1)}h
+            {' '}{student.name}'s billing period ({formatDuration(billedHours)} of {formatDuration(totalHours)}
             are billed). Move the billing start date back, or delete them.
           </p>
         </div>
@@ -81,7 +82,7 @@ export default function StudentSessionHistory({ student }: StudentSessionHistory
           <div key={session.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-gray-800">{session.hours}h</span>
+                <span className="text-sm font-semibold text-gray-800">{formatDuration(session.hours)}</span>
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
                   session.type === 'extra'
                     ? 'bg-amber-100 text-amber-700'

@@ -43,8 +43,9 @@ export interface Session {
   note: string
   createdAt: string
   /**
-   * Charge for an 'extra' session, billed on top of the monthly fee.
-   * Monthly students only — hourly students bill extras at hours × rate.
+   * Charge for an 'extra' session. For monthly students it's billed on top
+   * of the flat fee; for hourly students it overrides hours × rate for that
+   * one class. Leave unset to bill it automatically instead.
    */
   extraAmount?: number
 }
@@ -72,6 +73,99 @@ export interface Payment {
   createdAt: string
 }
 
+/** A manual line on an invoice — a discount, waiver, or extra charge. Positive adds, negative reduces. */
+export interface InvoiceAdjustment {
+  description: string
+  amount: number
+}
+
+/**
+ * draft  — editable, previewable, carries no number and no weight on the ledger.
+ * issued — finalised: numbered, frozen, and counted against what's owed.
+ * void   — was issued, then cancelled; kept for the audit trail, ignored in totals.
+ */
+export type InvoiceStatus = 'draft' | 'issued' | 'void'
+
+/**
+ * One thing an invoice billed: a single hourly session, or a whole monthly
+ * cycle's fee. Coverage — not a date range — is what stops work being billed
+ * twice, so a session back-dated into an already-invoiced period still gets
+ * picked up by the next invoice.
+ */
+export interface InvoiceCoverage {
+  /** Session id, or billing-cycle key for a monthly fee. */
+  ref: string
+  kind: 'session' | 'cycle'
+  /** What this invoice actually charged for it. */
+  amount: number
+}
+
+/**
+ * An invoice document. Once finalised, `invoiceNumber`, `total` and `html`
+ * are frozen — reprinting it later reproduces exactly what was sent, even if
+ * sessions, rates or breaks change afterwards. Drafts store only the inputs
+ * and are recomputed live until the moment they're issued.
+ */
+export interface Invoice {
+  id: string
+  studentId: string
+  status: InvoiceStatus
+  /** Assigned on finalise; empty while still a draft. */
+  invoiceNumber: string
+  /** Date finalised; empty while still a draft. */
+  issuedDate: string       // "YYYY-MM-DD"
+  /** Optional range the user asked for; '' means "everything not yet billed". */
+  periodFrom: string
+  periodTo: string
+  periodLabel: string
+  /** What this invoice billed. Empty while a draft. */
+  coverage: InvoiceCoverage[]
+  /** Cost of the work newly billed here, before adjustments. */
+  charges: number
+  adjustments: InvoiceAdjustment[]
+  /**
+   * charges + sum(adjustments) — this invoice's *own* value. Deliberately
+   * excludes brought-forward arrears, or summing invoices would double-count.
+   */
+  total: number
+  /** Prior invoice totals minus payments, at issue time. Display only. */
+  previousBalance: number
+  /** previousBalance + total. Display only. */
+  amountDueNow: number
+  /** Exact rendered invoice, frozen at finalise. Empty while a draft. */
+  html: string
+  createdAt: string
+  voidedAt?: string
+  /** Set when this document reverses another invoice. */
+  creditsInvoiceId?: string
+  /**
+   * Set only on invoices migrated from before coverage tracking existed:
+   * everything on or before this date is treated as already billed.
+   */
+  legacyCoveredThrough?: string
+}
+
+/**
+ * Proof that money changed hands. Issued once per payment and never edited —
+ * a mistake is corrected by voiding it, not by rewriting history.
+ */
+export interface Receipt {
+  id: string
+  studentId: string
+  paymentId: string
+  receiptNumber: string
+  issuedDate: string       // "YYYY-MM-DD"
+  /** The amount acknowledged, frozen at issue. */
+  amount: number
+  /** Exact rendered receipt, frozen at issue. */
+  html: string
+  createdAt: string
+  voided?: boolean
+  voidedAt?: string
+  /** Why it was voided — e.g. the underlying payment was deleted. */
+  voidReason?: string
+}
+
 export interface Settings {
   teacherName: string
   teacherTimezone: string
@@ -90,7 +184,7 @@ export interface Settings {
  * a break or a session re-flows the whole timeline correctly.
  */
 export interface BillingCycle {
-  /** Stable id, e.g. "cycle-3" or "2026-07". */
+  /** Stable id, e.g. "cycle-2026-07-15" or "2026-07". */
   key: string
   /** 1-based, in chronological order. */
   index: number

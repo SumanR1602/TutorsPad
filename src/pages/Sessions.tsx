@@ -9,7 +9,7 @@ import StudentAvatar from '@components/shared/StudentAvatar'
 import useAppStore from '@store/useStore'
 import { formatDate } from '@utils/billing'
 import { getBillingCycles, findCycleForDate } from '@utils/billingCore'
-import { formatMonthLong, formatDayMonth } from '@utils/date'
+import { formatMonthLong, formatDayMonth, formatDuration } from '@utils/date'
 import { useToast } from '@hooks/useToast'
 import type { Session } from '@/types'
 
@@ -163,7 +163,7 @@ export default function Sessions() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <p className="text-sm font-semibold text-gray-900 mr-1">{session.hours}h</p>
+                  <p className="text-sm font-semibold text-gray-900 mr-1">{formatDuration(session.hours)}</p>
                   <button
                     onClick={() => setEditSession(session)}
                     aria-label="Edit session"

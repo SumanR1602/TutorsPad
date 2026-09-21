@@ -4,7 +4,8 @@ import useAppStore from '@store/useStore'
 import ConfirmModal from '../shared/ConfirmModal'
 import { format12h, convertISTtoTZ, getUTCOffsetLabel } from '@utils/timezone'
 import { formatCurrency } from '@utils/billing'
-import { getStudentLedger } from '@utils/billingCore'
+import { getStudentLedger, getRateAt } from '@utils/billingCore'
+import { todayISO, formatDuration } from '@utils/date'
 import { DEFAULT_CURRENCY } from '@constants'
 import { useToast } from '@hooks/useToast'
 import Modal from '../shared/Modal'
@@ -26,6 +27,7 @@ export default function StudentCard({ student }: StudentCardProps) {
   const sessions      = useAppStore((s) => s.sessions)
   const payments      = useAppStore((s) => s.payments)
   const breaks        = useAppStore((s) => s.breaks)
+  const invoices      = useAppStore((s) => s.invoices)
   const deleteStudent = useAppStore((s) => s.deleteStudent)
   const { showToast } = useToast()
 
@@ -36,9 +38,12 @@ export default function StudentCard({ student }: StudentCardProps) {
   const [showBreaks,    setShowBreaks]    = useState(false)
 
   const ledger = useMemo(
-    () => getStudentLedger(student, sessions, payments, breaks),
-    [student, sessions, payments, breaks],
+    () => getStudentLedger(student, sessions, payments, breaks, todayISO(), invoices),
+    [student, sessions, payments, breaks, invoices],
   )
+
+  // The plan in force today; a change scheduled ahead shouldn't show up yet.
+  const currentRate = getRateAt(student, todayISO())
 
   const hours  = useMemo(
     () => sessions.filter((s) => s.studentId === student.id).reduce((sum, s) => sum + s.hours, 0),
@@ -119,7 +124,7 @@ export default function StudentCard({ student }: StudentCardProps) {
           </div>
           <div className="bg-gray-50 rounded-xl p-2.5 text-center">
             <p className="text-[10px] text-gray-400 mb-0.5">Hours</p>
-            <p className="text-xs font-semibold text-gray-800">{hours.toFixed(1)}h</p>
+            <p className="text-xs font-semibold text-gray-800">{formatDuration(hours)}</p>
           </div>
           <div className={`rounded-xl p-2.5 text-center ${money.box}`}>
             <p className="text-[10px] text-gray-400 mb-0.5">{money.label}</p>
@@ -131,8 +136,8 @@ export default function StudentCard({ student }: StudentCardProps) {
 
         <div className="flex items-center justify-between text-xs text-gray-400">
           <span>
-            Rate: {formatCurrency(student.ratePerHour, student.currency ?? DEFAULT_CURRENCY)}
-            {(student.rateType ?? 'hourly') === 'monthly' ? '/mo' : '/hr'}
+            Rate: {formatCurrency(currentRate.ratePerHour, student.currency ?? DEFAULT_CURRENCY)}
+            {currentRate.rateType === 'monthly' ? '/mo' : '/hr'}
           </span>
           {student.scheduledTime && (
             <div className="text-right">

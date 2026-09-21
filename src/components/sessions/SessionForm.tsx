@@ -10,8 +10,8 @@ import { AlertTriangle, Ban } from 'lucide-react'
 import useAppStore from '@store/useStore'
 import { useToast } from '@hooks/useToast'
 import { formatCurrency } from '@utils/billing'
-import { getBillingCycles, checkSessionDate, getActiveRange } from '@utils/billingCore'
-import { todayISO, formatDayMonth } from '@utils/date'
+import { getBillingCycles, checkSessionDate, getActiveRange, hasLeft, getRateAt } from '@utils/billingCore'
+import { todayISO, formatDayMonth, formatDuration } from '@utils/date'
 import { HOUR_OPTIONS } from '@constants'
 import type { Session, Student } from '@/types'
 
@@ -37,10 +37,15 @@ export default function SessionForm({
   const isEdit = !!session
   const today  = todayISO()
 
+  // A left student can't take a new session — checkSessionDate refuses any
+  // date past their last day anyway — so they're left out of the picker
+  // entirely instead of being selectable and then instantly blocked.
+  const pickableStudents = useMemo(() => students.filter((s) => !hasLeft(s, today)), [students, today])
+
   const [form, setForm] = useState({
     studentId: isEdit
       ? session.studentId
-      : (preselectedStudentId ?? students[0]?.id ?? ''),
+      : (preselectedStudentId ?? pickableStudents[0]?.id ?? ''),
     date:  isEdit ? session.date  : today,
     hours: isEdit ? session.hours : 1,
     type:  isEdit ? session.type  : ('regular' as 'regular' | 'extra'),
@@ -48,11 +53,20 @@ export default function SessionForm({
     extraAmount: isEdit && session.extraAmount != null ? String(session.extraAmount) : '',
   })
 
+  // A duration that isn't one of the quick-pick chips (e.g. 1.75h from an
+  // edit, or someone who just wants to type it) opens the custom input
+  // instead of leaving it looking unselected.
+  const [customDuration, setCustomDuration] = useState(
+    () => !HOUR_OPTIONS.includes(isEdit ? session.hours : 1),
+  )
+
   const [dateError, setDateError] = useState<string | null>(null)
   const [dupWarning, setDupWarning] = useState(false)
 
   const selected  = students.find((s) => s.id === form.studentId)
-  const isMonthly = (selected?.rateType ?? 'hourly') === 'monthly'
+  // How *this* session bills, which is the rate in force on its own date —
+  // not the plan the student happens to be on today.
+  const isMonthly = selected ? getRateAt(selected, form.date).rateType === 'monthly' : false
 
   /** The window this student can have sessions in — drives the date input. */
   const range = useMemo(
@@ -121,7 +135,7 @@ export default function SessionForm({
         studentId: form.studentId, date: form.date, hours,
         type: form.type, note: form.note, extraAmount,
       })
-      showToast(`${selected.name} – ${hours}h logged`, 'success')
+      showToast(`${selected.name} – ${formatDuration(hours)} logged`, 'success')
     }
     onClose()
   }
@@ -150,7 +164,7 @@ export default function SessionForm({
         <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3 py-2.5">
           <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-800 leading-snug">
-            {studentName} already has a {duplicate.hours}h session on{' '}
+            {studentName} already has a {formatDuration(duplicate.hours)} session on{' '}
             {formatDayMonth(form.date)}. Submit again to log a second one.
           </p>
         </div>
@@ -184,7 +198,7 @@ export default function SessionForm({
             }}
             required
           >
-            {students.map((s) => (
+            {pickableStudents.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
@@ -218,9 +232,9 @@ export default function SessionForm({
             <button
               key={h}
               type="button"
-              onClick={() => setForm({ ...form, hours: h })}
+              onClick={() => { setForm({ ...form, hours: h }); setCustomDuration(false) }}
               className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
-                form.hours === h
+                !customDuration && form.hours === h
                   ? 'bg-primary-600 text-white border-primary-600'
                   : 'bg-white text-gray-600 border-gray-200'
               }`}
@@ -228,7 +242,43 @@ export default function SessionForm({
               {h}h
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setCustomDuration(true)}
+            className={`px-3 py-1.5 rounded-xl text-sm font-medium border transition-colors ${
+              customDuration
+                ? 'bg-primary-600 text-white border-primary-600'
+                : 'bg-white text-gray-600 border-gray-200'
+            }`}
+          >
+            Custom
+          </button>
         </div>
+        {customDuration && (
+          <>
+            <div className="relative mt-2">
+              <input
+                type="number"
+                className="input pr-16"
+                placeholder="e.g. 20"
+                value={form.hours > 0 ? Math.round(form.hours * 60) : ''}
+                min="1"
+                step="1"
+                onChange={(e) => {
+                  const mins = parseFloat(e.target.value)
+                  setForm({ ...form, hours: Number.isFinite(mins) && mins > 0 ? mins / 60 : 0 })
+                }}
+                autoFocus
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                minutes
+              </span>
+            </div>
+            {form.hours > 0 && (
+              <p className="text-xs text-gray-400 mt-1">= {formatDuration(form.hours)}</p>
+            )}
+          </>
+        )}
       </div>
 
       {/* Type */}
@@ -272,7 +322,10 @@ export default function SessionForm({
                 ? form.extraAmount
                   ? `Adds ${formatCurrency(parseFloat(form.extraAmount) || 0, selected?.currency)} to the cycle this class falls in.`
                   : "Leave blank to include this class in the monthly fee at no extra charge."
-                : 'Leave blank to bill this class at the usual hourly rate.'}
+                : form.extraAmount
+                  ? `Bills ${formatCurrency(parseFloat(form.extraAmount) || 0, selected?.currency)} for this class ` +
+                    `instead of ${formatDuration(form.hours)} × the hourly rate.`
+                  : 'Leave blank to bill this class at the usual hourly rate.'}
             </p>
           </div>
         )}

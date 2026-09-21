@@ -7,7 +7,7 @@ import useAppStore from '@store/useStore'
 import { formatCurrency } from '@utils/billing'
 import { getStudentLedger, earningsForMonthFromCycles } from '@utils/billingCore'
 import { calcStreak } from '@utils/stats'
-import { todayISO, currentYM, formatMonthLong } from '@utils/date'
+import { todayISO, currentYM, formatMonthLong, formatDuration } from '@utils/date'
 import { DEFAULT_CURRENCY } from '@constants'
 
 export default function Dashboard() {
@@ -15,6 +15,7 @@ export default function Dashboard() {
   const sessions = useAppStore((s) => s.sessions)
   const payments = useAppStore((s) => s.payments)
   const breaks   = useAppStore((s) => s.breaks)
+  const invoices = useAppStore((s) => s.invoices)
   const settings = useAppStore((s) => s.settings)
 
   const today         = todayISO()
@@ -31,14 +32,14 @@ export default function Dashboard() {
     let balance = 0
     let earnings = 0
     for (const s of students) {
-      const ledger = getStudentLedger(s, sessions, payments, breaks, today)
+      const ledger = getStudentLedger(s, sessions, payments, breaks, today, invoices)
       balance += ledger.balance
       // A cycle is recognised in the month it starts — a 15 Jul → 14 Aug cycle
       // is July revenue, rather than being split across two months.
       earnings += earningsForMonthFromCycles(ledger.cycles, currentMonth)
     }
     return { totalBalance: balance, monthEarnings: earnings }
-  }, [students, sessions, payments, breaks, today, currentMonth])
+  }, [students, sessions, payments, breaks, invoices, today, currentMonth])
 
   const monthLabel = formatMonthLong(currentMonth)
 
@@ -89,7 +90,7 @@ export default function Dashboard() {
           <div className="card flex items-center justify-between py-3">
             <div>
               <p className="text-xs text-gray-400 mb-0.5">{monthLabel}</p>
-              <p className="text-sm font-semibold text-gray-800">{monthHours}h taught</p>
+              <p className="text-sm font-semibold text-gray-800">{formatDuration(monthHours)} taught</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400 mb-0.5">Billed</p>

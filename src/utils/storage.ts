@@ -6,10 +6,11 @@
 import ExcelJS from 'exceljs'
 import useAppStore from '@store/useStore'
 import { applyBoldStyle, addSheetHeader } from './excel'
+import { migrateInvoices } from './migrate'
 import { DEFAULT_CURRENCY } from '@constants'
 import { TIMEZONE_OPTIONS } from './timezone'
 import { todayISO } from './date'
-import type { Student, Session, Payment, Break, Settings } from '@/types'
+import type { Student, Session, Payment, Break, Settings, Invoice, Receipt } from '@/types'
 
 function tzLabel(ianaValue: string): string {
   return TIMEZONE_OPTIONS.find((o) => o.value === ianaValue)?.label ?? ianaValue
@@ -24,17 +25,21 @@ interface BackupFile {
   sessions: Session[]
   payments: Payment[]
   breaks?: Break[]        // added in v2
+  invoices?: Invoice[]    // added in v3
+  receipts?: Receipt[]    // added in v4
 }
 
 export function exportBackupJSON(): void {
-  const { students, sessions, payments, breaks } = useAppStore.getState()
+  const { students, sessions, payments, breaks, invoices, receipts } = useAppStore.getState()
   const backup: BackupFile = {
-    version: 2,
+    version: 5,
     exportedAt: new Date().toISOString(),
     students,
     sessions,
     payments,
     breaks,
+    invoices,
+    receipts,
   }
   try {
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
@@ -55,6 +60,8 @@ export interface ParsedBackup {
   sessions: Session[]
   payments: Payment[]
   breaks: Break[]
+  invoices: Invoice[]
+  receipts: Receipt[]
 }
 
 /** Reads and validates a .json backup file. Throws a descriptive error if invalid. */
@@ -158,11 +165,25 @@ export async function parseBackupJSON(file: File): Promise<ParsedBackup> {
     }
   }
 
+  // Invoices arrived in v3 — older backups simply have none. They're already
+  // frozen documents, so nothing to validate beyond basic shape; the migration
+  // fills in coverage and status for anything predating them.
+  const invoices: Invoice[] = migrateInvoices(
+    (Array.isArray(data.invoices) ? data.invoices : [])
+      .filter((i) => i && i.id && studentIds.has(i.studentId) && typeof i.total === 'number'),
+  )
+
+  // Receipts arrived in v4.
+  const receipts: Receipt[] = (Array.isArray(data.receipts) ? data.receipts : [])
+    .filter((r) => r && r.id && studentIds.has(r.studentId) && typeof r.amount === 'number')
+
   return {
     students: data.students,
     sessions: data.sessions,
     payments: data.payments,
     breaks,
+    invoices,
+    receipts,
   }
 }
 

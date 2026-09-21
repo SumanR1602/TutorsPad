@@ -10,8 +10,11 @@ function escHtml(str) {
 
 export function buildInvoiceHTML({
   invNo, teacherName, issued, student, isMonthly,
-  periodLabel, sessionCount, totalHours, periodDue, carryForward, amountDueNow,
+  periodLabel, sessionCount, totalHoursLabel, charges, previousBalance, amountDueNow,
   sessionRows, fmt,
+  adjustments = /** @type {{ description: string, amount: number }[]} */ ([]),
+  isDraft = false,
+  isCreditNote = false,
 }) {
   const duePositive = amountDueNow >= 0
   const dueLabel    = duePositive ? 'Amount Due Now' : 'Net Credit Balance'
@@ -25,12 +28,17 @@ export function buildInvoiceHTML({
   const safeInvNo   = escHtml(invNo)
   const safeIssued  = escHtml(issued)
   const safePeriod  = escHtml(periodLabel)
+  const watermark   = isDraft ? 'DRAFT' : (isCreditNote ? 'CREDIT NOTE' : 'TutorsPad')
+  const docWord     = isDraft ? 'Draft — Not Issued' : (isCreditNote ? 'Credit Note' : 'Invoice')
+  const docTitle    = isDraft
+    ? `DRAFT_Invoice_${nameSlug}`
+    : `${isCreditNote ? 'CreditNote' : 'Invoice'}_${nameSlug}_${safeInvNo}`
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Invoice_${nameSlug}_${safeInvNo}</title>
+  <title>${docTitle}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -216,7 +224,7 @@ export function buildInvoiceHTML({
   <div class="page">
 
     <!-- Watermark -->
-    <div class="wm-text" aria-hidden="true">TutorsPad</div>
+    <div class="wm-text" aria-hidden="true"${isDraft || isCreditNote ? ' style="color:rgba(220,38,38,0.13);font-size:96px;letter-spacing:14px"' : ''}>${watermark}</div>
 
     <!-- Header -->
     <div class="inv-header">
@@ -242,9 +250,9 @@ export function buildInvoiceHTML({
         </div>
       </div>
       <div class="inv-right">
-        <div class="inv-word">Invoice</div>
+        <div class="inv-word">${docWord}</div>
         <div class="inv-num">${safeInvNo}</div>
-        <div class="inv-date">Issued ${safeIssued}</div>
+        <div class="inv-date">${isDraft ? 'Preview only' : `Issued ${safeIssued}`}</div>
       </div>
     </div>
 
@@ -257,17 +265,17 @@ export function buildInvoiceHTML({
         <div class="rate-chip">${fmt(student.ratePerHour)} / ${isMonthly ? 'month' : 'hour'}</div>
       </div>
       <div class="meta-cell">
-        <div class="m-label">Invoice</div>
+        <div class="m-label">${isDraft ? 'Draft' : docWord}</div>
         <div class="m-name">${safeInvNo}</div>
-        <div class="m-sub" style="margin-top:3px">Issued ${safeIssued}</div>
+        <div class="m-sub" style="margin-top:3px">${isDraft ? 'Not yet issued' : `Issued ${safeIssued}`}</div>
       </div>
     </div>
 
     <!-- Summary bar -->
     <div class="summary-bar">
       <div class="s-pill"><span class="s-dot"></span>Sessions: <strong>${sessionCount}</strong></div>
-      <div class="s-pill"><span class="s-dot"></span>Hours: <strong>${totalHours.toFixed(1)}h</strong></div>
-      <div class="s-pill"><span class="s-dot"></span>Period Total: <strong>${fmt(periodDue)}</strong></div>
+      <div class="s-pill"><span class="s-dot"></span>Hours: <strong>${totalHoursLabel}</strong></div>
+      <div class="s-pill"><span class="s-dot"></span>Charges: <strong>${fmt(charges)}</strong></div>
     </div>
 
     <!-- Sessions table -->
@@ -288,9 +296,9 @@ export function buildInvoiceHTML({
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3">${sessionCount} session${sessionCount !== 1 ? 's' : ''} &middot; ${totalHours.toFixed(1)}h</td>
+            <td colspan="3">${sessionCount} session${sessionCount !== 1 ? 's' : ''} &middot; ${totalHoursLabel}</td>
             <td></td>
-            <td class="r">${fmt(periodDue)}</td>
+            <td class="r">${fmt(charges)}</td>
           </tr>
         </tfoot>
       </table>
@@ -299,17 +307,24 @@ export function buildInvoiceHTML({
     <!-- Financial summary -->
     <div class="summary-wrap">
       <div class="summary-card">
-        ${carryForward !== 0 ? `
+        ${previousBalance !== 0 ? `
         <div class="sum-row">
-          <span class="lbl">${carryForward >= 0 ? 'Carry Forward Balance' : 'Previous Balance Due'}</span>
-          <span class="val" style="color:${carryForward >= 0 ? '#4f46e5' : '#dc2626'}">
-            ${fmt(Math.abs(carryForward))}
+          <span class="lbl">${previousBalance > 0 ? 'Previous Balance Due' : 'Credit Brought Forward'}</span>
+          <span class="val" style="color:${previousBalance > 0 ? '#dc2626' : '#4f46e5'}">
+            ${fmt(Math.abs(previousBalance))}
           </span>
         </div>` : ''}
         <div class="sum-row">
-          <span class="lbl">Sessions this period</span>
-          <span class="val">${fmt(periodDue)}</span>
+          <span class="lbl">${isCreditNote ? 'Credited' : 'Charges this invoice'}</span>
+          <span class="val">${fmt(charges)}</span>
         </div>
+        ${adjustments.map((a) => `
+        <div class="sum-row">
+          <span class="lbl">${escHtml(a.description)}</span>
+          <span class="val" style="color:${a.amount < 0 ? '#dc2626' : '#0f172a'}">
+            ${a.amount < 0 ? '-' : ''}${fmt(Math.abs(a.amount))}
+          </span>
+        </div>`).join('')}
         <div class="due-row" style="background:${dueBg};border-top:2px solid #e2e8f0;${dueBorder !== 'none' ? 'border:'+dueBorder+';' : ''}">
           <span style="color:${dueColor}">${dueLabel}</span>
           <span style="color:${dueColor};font-size:18px">${fmt(Math.abs(amountDueNow))}</span>

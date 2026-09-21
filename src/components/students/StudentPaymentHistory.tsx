@@ -19,6 +19,7 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   const allPayments   = useAppStore((s) => s.payments)
   const sessions      = useAppStore((s) => s.sessions)
   const breaks        = useAppStore((s) => s.breaks)
+  const invoices      = useAppStore((s) => s.invoices)
   const deletePayment = useAppStore((s) => s.deletePayment)
   const updatePayment = useAppStore((s) => s.updatePayment)
   const { showToast } = useToast()
@@ -38,8 +39,8 @@ export default function StudentPaymentHistory({ student }: StudentPaymentHistory
   )
 
   const ledger = useMemo(
-    () => getStudentLedger(student, sessions, allPayments, breaks),
-    [student, sessions, allPayments, breaks],
+    () => getStudentLedger(student, sessions, allPayments, breaks, undefined, invoices),
+    [student, sessions, allPayments, breaks, invoices],
   )
   const totalPaid = ledger.totalPaid
 

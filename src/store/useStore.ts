@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Student, Session, Payment, Break, Settings, StudentLedger } from '@/types'
+import type { Student, Session, Payment, Break, Settings, StudentLedger, Invoice, InvoiceAdjustment, Receipt } from '@/types'
 import { STORE_NAME, DEFAULT_CURRENCY } from '@constants'
 import { getStudentLedger } from '@utils/billingCore'
-import { migrateStudent, migrateStudents } from '@utils/migrate'
+import { migrateStudent, migrateStudents, migrateInvoices } from '@utils/migrate'
 import { todayISO } from '@utils/date'
 
 /** Bump when the persisted shape changes; `migrate` below backfills. */
-const STORE_VERSION = 2
+const STORE_VERSION = 5
 
 /** Exactly what `partialize` writes to storage. */
 interface PersistedState {
@@ -16,6 +16,8 @@ interface PersistedState {
   payments: Payment[]
   breaks: Break[]
   settings: Settings
+  invoices: Invoice[]
+  receipts: Receipt[]
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -33,12 +35,19 @@ interface StoreState {
   sessions: Session[]
   payments: Payment[]
   breaks: Break[]
+  invoices: Invoice[]
+  receipts: Receipt[]
   pendingReminders: string[]  // studentIds — NOT persisted, in-memory only
   settings: Settings
 
   // ── Student actions ──────────────────────────────────────────────────────
   addStudent: (student: Omit<Student, 'id' | 'createdAt' | 'rateHistory'>) => void
-  updateStudent: (id: string, updates: Partial<Student>) => void
+  /**
+   * `rateEffectiveFrom` overrides the default "effective today" when a rate
+   * or rate-type change is included in `updates` — lets the caller schedule
+   * a change for a specific date instead of always applying it immediately.
+   */
+  updateStudent: (id: string, updates: Partial<Student>, rateEffectiveFrom?: string) => void
   deleteStudent: (id: string) => void
 
   // ── Session actions ──────────────────────────────────────────────────────
@@ -60,6 +69,31 @@ interface StoreState {
   // ── Settings ─────────────────────────────────────────────────────────────
   updateSettings: (updates: Partial<Settings>) => void
 
+  // ── Invoice actions ──────────────────────────────────────────────────────
+  /** Starts an editable, unnumbered draft that carries no weight on the ledger. */
+  createDraftInvoice: (
+    studentId: string, periodFrom: string, periodTo: string, adjustments?: InvoiceAdjustment[],
+  ) => Invoice
+  updateDraftInvoice: (id: string, updates: Partial<Pick<Invoice, 'periodFrom' | 'periodTo' | 'adjustments'>>) => void
+  deleteDraftInvoice: (id: string) => void
+  /** Freezes a draft into an issued document. `frozen` comes from finalizeInvoice(). */
+  finalizeDraftInvoice: (
+    id: string,
+    frozen: Pick<Invoice,
+      'status' | 'invoiceNumber' | 'issuedDate' | 'periodLabel' | 'coverage'
+      | 'charges' | 'total' | 'previousBalance' | 'amountDueNow' | 'html'>,
+  ) => void
+  voidInvoice: (id: string) => void
+  /** Records a frozen credit note reversing an issued invoice. */
+  issueCreditNote: (record: Omit<Invoice, 'id' | 'createdAt'>) => Invoice
+  getInvoicesByStudent: (studentId: string) => Invoice[]
+
+  // ── Receipt actions ─────────────────────────────────────────────────────
+  /** Records a frozen receipt. `record` comes from issueReceipt(). */
+  addReceipt: (record: Pick<Receipt, 'studentId' | 'paymentId' | 'receiptNumber' | 'issuedDate' | 'amount' | 'html'>) => Receipt
+  voidReceipt: (id: string, reason?: string) => void
+  getReceiptForPayment: (paymentId: string) => Receipt | undefined
+
   // ── Selectors (computed) ─────────────────────────────────────────────────
   getStudentById: (id: string) => Student | undefined
   getSessionsByStudent: (studentId: string) => Session[]
@@ -78,6 +112,7 @@ interface StoreState {
   // ── Backup restore ───────────────────────────────────────────────────────
   restoreBackup: (
     students: Student[], sessions: Session[], payments: Payment[], breaks?: Break[],
+    invoices?: Invoice[], receipts?: Receipt[],
   ) => void
 }
 
@@ -93,6 +128,8 @@ const useAppStore = create<StoreState>()(
       sessions: [],
       payments: [],
       breaks: [],
+      invoices: [],
+      receipts: [],
       pendingReminders: [], // intentionally not persisted — resets on reload
       settings: DEFAULT_SETTINGS,
 
@@ -120,11 +157,14 @@ const useAppStore = create<StoreState>()(
 
       /**
        * A rate change appends to the timeline instead of overwriting it, so
-       * past cycles keep the price they were actually billed at. The new rate
-       * takes effect today, which means the cycle in progress is unaffected
-       * (cycles are priced on their start date) and the next one picks it up.
+       * past cycles keep the price they were actually billed at. It defaults
+       * to taking effect today (the cycle in progress is unaffected, since
+       * cycles are priced on their start date, and the next one picks it up),
+       * but the caller can pass `rateEffectiveFrom` to schedule it for a
+       * different date — a future date queues it up in advance, or a date
+       * inside the still-open current cycle applies it sooner.
        */
-      updateStudent: (id, updates) =>
+      updateStudent: (id, updates, rateEffectiveFrom) =>
         set((state) => ({
           students: state.students.map((s) => {
             if (s.id !== id) return s
@@ -136,7 +176,8 @@ const useAppStore = create<StoreState>()(
 
             if (!rateChanged) return next
 
-            const effectiveFrom = todayISO()
+            const today = todayISO()
+            const effectiveFrom = rateEffectiveFrom || today
             const history = [...(s.rateHistory ?? [])].filter(
               (r) => r.effectiveFrom !== effectiveFrom,
             )
@@ -146,7 +187,12 @@ const useAppStore = create<StoreState>()(
               rateType: next.rateType,
             })
             history.sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))
-            return { ...next, rateHistory: history }
+
+            // The record's own rate fields mean "the plan in force now", so a
+            // change dated ahead only lands on the timeline until that day.
+            return effectiveFrom > today
+              ? { ...next, ratePerHour: s.ratePerHour, rateType: s.rateType, rateHistory: history }
+              : { ...next, rateHistory: history }
           }),
         })),
 
@@ -156,6 +202,8 @@ const useAppStore = create<StoreState>()(
           sessions: state.sessions.filter((s) => s.studentId !== id),
           payments: state.payments.filter((p) => p.studentId !== id),
           breaks:   state.breaks.filter((b) => b.studentId !== id),
+          invoices: state.invoices.filter((i) => i.studentId !== id),
+          receipts: state.receipts.filter((r) => r.studentId !== id),
         })),
 
       // ── Session actions ───────────────────────────────────────────────────
@@ -190,7 +238,16 @@ const useAppStore = create<StoreState>()(
         })),
 
       deletePayment: (id) =>
-        set((state) => ({ payments: state.payments.filter((p) => p.id !== id) })),
+        set((state) => ({
+          payments: state.payments.filter((p) => p.id !== id),
+          // A receipt is evidence, so it survives its payment being removed —
+          // voided rather than deleted, leaving the number sequence intact.
+          receipts: state.receipts.map((r) =>
+            r.paymentId === id && !r.voided
+              ? { ...r, voided: true, voidedAt: new Date().toISOString(), voidReason: 'Payment deleted' }
+              : r,
+          ),
+        })),
 
       // ── Break actions ─────────────────────────────────────────────────────
       addBreak: (brk) =>
@@ -215,17 +272,106 @@ const useAppStore = create<StoreState>()(
           .sort((a, b) => b.startDate.localeCompare(a.startDate)),
 
       // ── Backup restore ────────────────────────────────────────────────────
-      restoreBackup: (students, sessions, payments, breaks = []) =>
+      restoreBackup: (students, sessions, payments, breaks = [], invoices = [], receipts = []) =>
         set({
           students: migrateStudents(students, sessions),
           sessions,
           payments,
           breaks,
+          invoices,
+          receipts,
         }),
 
       // ── Settings ──────────────────────────────────────────────────────────
       updateSettings: (updates) =>
         set((state) => ({ settings: { ...state.settings, ...updates } })),
+
+      // ── Invoice actions ───────────────────────────────────────────────────
+      createDraftInvoice: (studentId, periodFrom, periodTo, adjustments = []) => {
+        const draft: Invoice = {
+          id: crypto.randomUUID(),
+          studentId,
+          status: 'draft',
+          invoiceNumber: '',
+          issuedDate: '',
+          periodFrom,
+          periodTo,
+          periodLabel: '',
+          coverage: [],
+          charges: 0,
+          adjustments,
+          total: 0,
+          previousBalance: 0,
+          amountDueNow: 0,
+          html: '',
+          createdAt: new Date().toISOString(),
+        }
+        set((state) => ({ invoices: [...state.invoices, draft] }))
+        return draft
+      },
+
+      updateDraftInvoice: (id, updates) =>
+        set((state) => ({
+          invoices: state.invoices.map((i) =>
+            i.id === id && i.status === 'draft' ? { ...i, ...updates } : i,
+          ),
+        })),
+
+      deleteDraftInvoice: (id) =>
+        set((state) => ({
+          invoices: state.invoices.filter((i) => !(i.id === id && i.status === 'draft')),
+        })),
+
+      finalizeDraftInvoice: (id, frozen) =>
+        set((state) => ({
+          invoices: state.invoices.map((i) =>
+            i.id === id && i.status === 'draft' ? { ...i, ...frozen } : i,
+          ),
+        })),
+
+      voidInvoice: (id) =>
+        set((state) => ({
+          invoices: state.invoices.map((i) =>
+            i.id === id && i.status === 'issued'
+              // Coverage stays on the record but stops counting, so the work
+              // it claimed becomes billable again on the next invoice.
+              ? { ...i, status: 'void' as const, voidedAt: new Date().toISOString() }
+              : i,
+          ),
+        })),
+
+      issueCreditNote: (record) => {
+        const full: Invoice = {
+          ...record, id: crypto.randomUUID(), createdAt: new Date().toISOString(),
+        }
+        set((state) => ({ invoices: [...state.invoices, full] }))
+        return full
+      },
+
+      getInvoicesByStudent: (studentId) =>
+        get()
+          .invoices.filter((i) => i.studentId === studentId)
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      // ── Receipt actions ───────────────────────────────────────────────────
+      addReceipt: (record) => {
+        const full: Receipt = {
+          ...record, id: crypto.randomUUID(), createdAt: new Date().toISOString(),
+        }
+        set((state) => ({ receipts: [...state.receipts, full] }))
+        return full
+      },
+
+      voidReceipt: (id, reason) =>
+        set((state) => ({
+          receipts: state.receipts.map((r) =>
+            r.id === id
+              ? { ...r, voided: true, voidedAt: new Date().toISOString(), voidReason: reason }
+              : r,
+          ),
+        })),
+
+      getReceiptForPayment: (paymentId) =>
+        get().receipts.find((r) => r.paymentId === paymentId && !r.voided),
 
       // ── Selectors ─────────────────────────────────────────────────────────
       getStudentById: (id) => get().students.find((s) => s.id === id),
@@ -247,10 +393,10 @@ const useAppStore = create<StoreState>()(
 
       /** Single computed source of truth — every billing figure comes from here. */
       getLedger: (studentId) => {
-        const { students, sessions, payments, breaks } = get()
+        const { students, sessions, payments, breaks, invoices } = get()
         const student = students.find((s) => s.id === studentId)
         if (!student) return EMPTY_LEDGER
-        return getStudentLedger(student, sessions, payments, breaks)
+        return getStudentLedger(student, sessions, payments, breaks, todayISO(), invoices)
       },
 
       getTotalDue:  (studentId) => get().getLedger(studentId).totalDue,
@@ -280,9 +426,15 @@ const useAppStore = create<StoreState>()(
         payments: state.payments,
         breaks: state.breaks,
         settings: state.settings,
+        invoices: state.invoices,
+        receipts: state.receipts,
       }),
       /**
        * v1 → v2: adds billing anchors, rate history and the breaks list.
+       * v2 → v3: adds the invoices list.
+       * v3 → v4: invoices gain a draft/issued/void status; adds receipts.
+       * v4 → v5: invoices gain coverage tracking; `total` becomes the
+       *           invoice's own value rather than including arrears.
        * Backfills in place; no data is dropped or reset.
        */
       migrate: (persisted, version) => {
@@ -295,12 +447,16 @@ const useAppStore = create<StoreState>()(
           payments: state.payments ?? [],
           breaks: state.breaks ?? [],
           settings: state.settings ?? DEFAULT_SETTINGS,
+          invoices: migrateInvoices(state.invoices ?? []),
+          receipts: state.receipts ?? [],
         }
       },
       /** Belt and braces: heal any record that slipped through half-formed. */
       onRehydrateStorage: () => (state) => {
         if (!state) return
         state.breaks ??= []
+        state.receipts ??= []
+        state.invoices = migrateInvoices(state.invoices ?? [])
         state.students = state.students.map((s) => migrateStudent(s, state.sessions ?? []))
       },
     },

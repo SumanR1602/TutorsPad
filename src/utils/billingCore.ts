@@ -16,13 +16,26 @@
  * Hourly students
  *   Calendar months, hours × rate.
  *
- * A student's rate *type* (hourly vs. monthly) is fixed for their lifetime —
- * only the rate *value* can change, via `rateHistory`.
+ * Rate changes — value or type (monthly ↔ hourly)
+ *   Both live on `rateHistory`, keyed by the date they took effect. A change
+ *   takes effect from today onward and never rewrites the past: cycles are
+ *   generated per `rateHistory` segment (see `getRateTypeSegments`), so a
+ *   switch from monthly to hourly closes out the current monthly cycle at
+ *   the switch date and bills it in full for its agreed rate — even though
+ *   it ends a few days early, that period was already committed to at that
+ *   price — and hourly billing starts clean from the switch date.
+ *   Already-billed cycles keep their original type, rate and amount.
+ *
+ * Leaving vs. switching
+ *   A student who *leaves* mid-cycle (`endDate`) is different: there's no
+ *   reason to charge for days that will never be taught, so that final
+ *   cycle *is* pro-rated down to the fraction of days actually used
+ *   (see `prorateOnCut` in `buildMonthlyCycles`).
  */
 
 import type {
   Student, Session, Payment, Break, RateChange, RateType,
-  BillingCycle, StudentLedger,
+  BillingCycle, StudentLedger, Invoice,
 } from '@/types'
 import {
   todayISO, addDays, addMonthsClamped, daysInclusive, overlapDays,
@@ -67,6 +80,53 @@ export function getRateAt(student: Student, date: string): RateChange {
 /** Last day this student is billable at all: their leave date, or forever. */
 function billableUntil(student: Student, today: string): string {
   return student.endDate ? minIso(student.endDate, today) : today
+}
+
+/** True once a student's last day has come and gone. */
+export function hasLeft(student: Student, today: string = todayISO()): boolean {
+  return !!student.endDate && student.endDate <= today
+}
+
+export interface RateTypeSegment {
+  start: string
+  end: string
+  rateType: RateType
+}
+
+/**
+ * Splits [from, to] into contiguous stretches of a single rate *type*, so a
+ * monthly → hourly (or hourly → monthly) switch mid-lifetime can be billed
+ * with the right cycle shape on each side instead of one type winning
+ * retroactively over the whole history.
+ *
+ * A rate-*value*-only change doesn't split anything here — `getRateAt` still
+ * picks the right value per cycle inside a segment, exactly as before.
+ */
+export function getRateTypeSegments(student: Student, from: string, to: string): RateTypeSegment[] {
+  const switchPoints = getRateHistory(student)
+    .map((r) => r.effectiveFrom)
+    .filter((d) => d > from && d <= to)
+    .sort()
+
+  const raw: RateTypeSegment[] = []
+  let segStart = from
+  for (const point of switchPoints) {
+    const segEnd = addDays(point, -1)
+    if (segEnd >= segStart) {
+      raw.push({ start: segStart, end: segEnd, rateType: getRateAt(student, segStart).rateType })
+      segStart = point
+    }
+  }
+  raw.push({ start: segStart, end: to, rateType: getRateAt(student, segStart).rateType })
+
+  // Merge back-to-back segments left the same type by a rate-value-only change.
+  const merged: RateTypeSegment[] = []
+  for (const seg of raw) {
+    const last = merged[merged.length - 1]
+    if (last && last.rateType === seg.rateType) last.end = seg.end
+    else merged.push({ ...seg })
+  }
+  return merged
 }
 
 // ─── Cycle boundaries ─────────────────────────────────────────────────────
@@ -128,15 +188,24 @@ interface SegmentArgs {
   segment: { start: string; end: string }
   /** Stop generating once a cycle reaches this date. */
   genUntil: string
-  /** If set and inside a cycle, that cycle is pro-rated and generation stops. */
+  /** If set and inside a cycle, that cycle ends there and generation stops. */
   terminationDate?: string
+  /**
+   * Whether hitting `terminationDate` mid-cycle scales the fee down to the
+   * fraction of the cycle actually used. True when the student is leaving —
+   * there's no reason to charge for days that will never be taught. False
+   * when the cutoff is just a rate/type switch: that cycle was already
+   * agreed at its rate for its full term, so it's billed in full even though
+   * it ends a few days early: the new rate simply starts clean next segment.
+   */
+  prorateOnCut: boolean
   today: string
   startIndex: number
 }
 
 /** Monthly: anchored, break-extended cycles inside one segment. */
 function buildMonthlyCycles(args: SegmentArgs): BillingCycle[] {
-  const { student, sessions, breaks, segment, genUntil, terminationDate, today, startIndex } = args
+  const { student, sessions, breaks, segment, genUntil, terminationDate, prorateOnCut, today, startIndex } = args
   const anchor = segment.start
   const cycles: BillingCycle[] = []
   if (anchor > genUntil) return cycles
@@ -151,42 +220,54 @@ function buildMonthlyCycles(args: SegmentArgs): BillingCycle[] {
   for (let i = 0; i < MAX_CYCLES; i++) {
     const nominalEnd = addDays(addDays(addMonthsClamped(anchor, i + 1), -1), drift)
     const { end, breakDays } = resolveCycleEnd(start, nominalEnd, breaks)
-
-    const inCycle = sessions.filter((s) => s.date >= start && s.date <= end)
-    const hours = inCycle.reduce((sum, s) => sum + s.hours, 0)
     const rate = getRateAt(student, start)
+
+    const cutAt = terminationDate
+    const cutHere = !!cutAt && cutAt >= start && cutAt < end
+
+    // A cycle cut short — by the student leaving, or by a switch to hourly —
+    // only "contains" sessions up to the cutoff. Sessions after it belong to
+    // whatever comes next (the leave means no more sessions exist; a type
+    // switch means they're already being billed by the following segment),
+    // so counting them here too would double-count hours and, worse, double
+    // bill an extra-class charge.
+    const inclusionEnd = cutHere ? cutAt! : end
+    const inCycle = sessions.filter((s) => s.date >= start && s.date <= inclusionEnd)
+    const hours = inCycle.reduce((sum, s) => sum + s.hours, 0)
 
     // Extras are billed on top of the flat fee, at the amount set per session.
     const extraAmount = inCycle
       .filter((s) => s.type === 'extra')
       .reduce((sum, s) => sum + (s.extraAmount ?? 0), 0)
 
-    // A cycle cut short — by the student leaving, or by a switch to hourly —
-    // is charged for the teaching days actually used. Break days are excluded
-    // from both sides so a pause can't dilute the fraction.
+    // The cycle is charged for the teaching days actually used, but only
+    // when the cutoff is a departure — see `prorateOnCut` above. Break days
+    // are excluded from both sides so a pause can't dilute the fraction.
     let baseAmount = rate.ratePerHour
     let proRated = false
-    const cutAt = terminationDate
-    if (cutAt && cutAt >= start && cutAt < end) {
+    if (cutHere && prorateOnCut) {
       const totalDays = daysInclusive(start, end) - breakDays
       const usedBreakDays = breaks.reduce(
-        (sum, b) => sum + overlapDays(b.startDate, b.endDate, start, cutAt), 0,
+        (sum, b) => sum + overlapDays(b.startDate, b.endDate, start, cutAt!), 0,
       )
-      const usedDays = daysInclusive(start, cutAt) - usedBreakDays
+      const usedDays = daysInclusive(start, cutAt!) - usedBreakDays
       const fraction = totalDays > 0 ? Math.min(1, Math.max(0, usedDays / totalDays)) : 0
       baseAmount = round2(rate.ratePerHour * fraction)
       proRated = true
     }
 
     const amount = round2(baseAmount + extraAmount)
+    const cycleEnd = cutHere ? cutAt! : end
 
     cycles.push({
-      key: `cycle-${startIndex + i + 1}`,
+      // Keyed by start date, not position: invoice coverage stores this key,
+      // and a rate-type switch back-dated later would renumber an index.
+      key: `cycle-${start}`,
       index: startIndex + i + 1,
       start,
-      end: proRated ? minIso(end, cutAt!) : end,
+      end: cycleEnd,
       nominalEnd,
-      label: `${formatDayMonth(start)} → ${formatDayMonth(proRated ? minIso(end, cutAt!) : end)}`,
+      label: `${formatDayMonth(start)} → ${formatDayMonth(cycleEnd)}`,
       breakDays,
       hours: round2(hours),
       rate: rate.ratePerHour,
@@ -200,7 +281,7 @@ function buildMonthlyCycles(args: SegmentArgs): BillingCycle[] {
       proRated,
     })
 
-    if (proRated || end >= genUntil) break
+    if (cutHere || end >= genUntil) break
     drift += breakDays
     start = addDays(end, 1)
   }
@@ -285,16 +366,33 @@ export function getBillingCycles(
     .sort((a, b) => a.date.localeCompare(b.date))
   const myBreaks = normalizeBreaks(breaks.filter((b) => b.studentId === student.id))
 
-  const terminationDate = student.endDate && student.endDate <= today ? student.endDate : undefined
-  const args: SegmentArgs = {
-    student, sessions: mine, breaks: myBreaks,
-    segment: { start: anchor, end: hardEnd },
-    genUntil: minIso(hardEnd, today), terminationDate, today, startIndex: 0,
-  }
+  const leaveDate = hasLeft(student, today) ? student.endDate : undefined
+  const segments = getRateTypeSegments(student, anchor, hardEnd)
 
-  return (student.rateType ?? DEFAULT_RATE_TYPE) === 'monthly'
-    ? buildMonthlyCycles(args)
-    : buildHourlyCycles(args)
+  const cycles: BillingCycle[] = []
+  segments.forEach((seg, i) => {
+    const isLastSegment = i === segments.length - 1
+    // A segment that ends before the last one didn't end because the student
+    // left — it ended because the rate type switched here, so the outgoing
+    // cycle closes at the segment boundary but keeps its full agreed fee
+    // (see `prorateOnCut`). The last segment closes on the student's actual
+    // leave date instead, if any, and that genuinely gets pro-rated.
+    const terminationDate = isLastSegment ? leaveDate : seg.end
+
+    const args: SegmentArgs = {
+      student, sessions: mine, breaks: myBreaks,
+      segment: { start: seg.start, end: seg.end },
+      genUntil: seg.end,
+      terminationDate,
+      prorateOnCut: isLastSegment,
+      today,
+      startIndex: cycles.length,
+    }
+
+    cycles.push(...(seg.rateType === 'monthly' ? buildMonthlyCycles(args) : buildHourlyCycles(args)))
+  })
+
+  return cycles
 }
 
 /**
@@ -352,8 +450,96 @@ export function allocatePayments(
 // ─── Public entry point ───────────────────────────────────────────────────
 
 /**
+ * Pushes each issued invoice's adjustments down onto the cycles that invoice
+ * actually billed, spread in proportion to what was charged for each.
+ *
+ * Without this a discount would only exist as a lump at the ledger total, and
+ * everything reading cycles directly — the per-cycle rows, the month's
+ * earnings, the spreadsheet — would still quote the undiscounted figure.
+ *
+ * `remainder` is whatever couldn't land on a cycle: a discount bigger than
+ * the cycle it applies to, or one whose coverage no longer resolves. It's
+ * carried separately so the ledger total stays exact either way.
+ */
+function applyInvoiceAdjustments(
+  cycles: BillingCycle[],
+  student: Student,
+  sessions: Session[],
+  invoices: Invoice[],
+): { cycles: BillingCycle[]; remainder: number } {
+  const issued = invoices.filter((i) => i.studentId === student.id && i.status === 'issued')
+  if (!issued.length) return { cycles, remainder: 0 }
+
+  const sessionById = new Map(
+    sessions.filter((s) => s.studentId === student.id).map((s) => [s.id, s]),
+  )
+  const perCycle = new Map<string, number>()
+  let remainder = 0
+
+  for (const inv of issued) {
+    const adjTotal = round2((inv.adjustments ?? []).reduce((sum, a) => sum + (a.amount || 0), 0))
+    if (!adjTotal) continue
+
+    const weights = new Map<string, number>()
+    let totalWeight = 0
+    for (const cov of inv.coverage ?? []) {
+      const key = cov.kind === 'cycle'
+        ? cycles.find((c) => c.key === cov.ref)?.key
+        : (() => {
+            const s = sessionById.get(cov.ref)
+            return s ? cycles.find((c) => s.date >= c.start && s.date <= c.end)?.key : undefined
+          })()
+      if (!key) continue
+      const weight = Math.abs(cov.amount) || 0
+      weights.set(key, (weights.get(key) ?? 0) + weight)
+      totalWeight += weight
+    }
+
+    if (totalWeight <= 0) {
+      remainder = round2(remainder + adjTotal)
+      continue
+    }
+
+    // Round every share but the last normally; give the last cycle whatever
+    // is left over. That way the shares always add back up to adjTotal
+    // exactly, instead of drifting a paisa or two from independent rounding.
+    const keys = [...weights.keys()]
+    let allocated = 0
+    keys.forEach((key, idx) => {
+      const share = idx === keys.length - 1
+        ? round2(adjTotal - allocated)
+        : round2(adjTotal * ((weights.get(key) ?? 0) / totalWeight))
+      if (idx !== keys.length - 1) allocated = round2(allocated + share)
+      perCycle.set(key, round2((perCycle.get(key) ?? 0) + share))
+    })
+  }
+
+  const adjusted = cycles.map((c) => {
+    const adj = perCycle.get(c.key)
+    if (!adj) return c
+    const target = round2(c.amount + adj)
+    const amount = Math.max(0, target)
+    remainder = round2(remainder + (target - amount))
+    return {
+      ...c,
+      baseAmount: round2(Math.max(0, amount - c.extraAmount)),
+      amount,
+      balance: amount,
+    }
+  })
+
+  return { cycles: adjusted, remainder: round2(remainder) }
+}
+
+/**
  * Everything the UI needs for one student, in a single pass.
  * `sessions`, `payments` and `breaks` may be the full unfiltered arrays.
+ *
+ * `invoices` contributes the manual adjustment lines — discounts, waivers,
+ * extra charges — from invoices that have actually been issued. Drafts and
+ * voided invoices are ignored: nothing counts until it's been sent. Each
+ * adjustment is attributed to the cycles its invoice covered, so every
+ * cycle-level figure inherits it instead of only the grand total.
  */
 export function getStudentLedger(
   student: Student,
@@ -361,16 +547,18 @@ export function getStudentLedger(
   payments: Payment[],
   breaks: Break[] = [],
   today: string = todayISO(),
+  invoices: Invoice[] = [],
 ): StudentLedger {
-  const cycles = getBillingCycles(student, sessions, breaks, today)
+  const raw = getBillingCycles(student, sessions, breaks, today)
   const myPayments = payments
     .filter((p) => p.studentId === student.id)
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  const { cycles: settled, credit } = allocatePayments(cycles, myPayments)
+  const { cycles, remainder } = applyInvoiceAdjustments(raw, student, sessions, invoices)
+  const { cycles: settled } = allocatePayments(cycles, myPayments)
 
   const totalDue = round2(
-    settled.filter((c) => c.started).reduce((sum, c) => sum + c.amount, 0),
+    settled.filter((c) => c.started).reduce((sum, c) => sum + c.amount, 0) + remainder,
   )
   const totalPaid = round2(
     myPayments.reduce((sum, p) => sum + Math.max(0, p.amount || 0), 0),
@@ -381,7 +569,9 @@ export function getStudentLedger(
     totalDue,
     totalPaid,
     balance: round2(Math.max(0, totalDue - totalPaid)),
-    credit,
+    // Discounting past zero doesn't hand back money that was never paid, so
+    // credit is capped at what actually came in.
+    credit: round2(Math.max(0, totalPaid - Math.max(0, totalDue))),
     unbilled: getUnbilledSessions(student, sessions, settled),
   }
 }

@@ -6,11 +6,11 @@
  * spreadsheet and the app can no longer disagree.
  */
 import ExcelJS from 'exceljs'
-import { getStudentLedger } from './billingCore'
+import { getStudentLedger, getRateAt } from './billingCore'
 import { formatDate, formatDayMonth, todayISO } from './date'
 import { DEFAULT_CURRENCY } from '@constants'
 import { applyBoldStyle, addSheetHeader } from './excel'
-import type { Student, Session, Payment, Break } from '@/types'
+import type { Student, Session, Payment, Break, Invoice } from '@/types'
 
 async function downloadWorkbook(wb: ExcelJS.Workbook, filename: string): Promise<void> {
   const buffer = await wb.xlsx.writeBuffer()
@@ -43,10 +43,11 @@ export async function exportToExcel(
   sessions: Session[],
   payments: Payment[],
   breaks: Break[] = [],
+  invoices: Invoice[] = [],
 ): Promise<void> {
   const currency  = student.currency ?? DEFAULT_CURRENCY
-  const isMonthly = (student.rateType ?? 'hourly') === 'monthly'
-  const ledger    = getStudentLedger(student, sessions, payments, breaks)
+  const currentRate = getRateAt(student, todayISO())
+  const ledger    = getStudentLedger(student, sessions, payments, breaks, todayISO(), invoices)
 
   const totalHours = sessions.reduce((sum, s) => sum + s.hours, 0)
   const myBreaks   = breaks.filter((b) => b.studentId === student.id)
@@ -60,7 +61,8 @@ export async function exportToExcel(
   sessionsSheet.columns = [
     { key: 'date',   width: 14 },
     { key: 'type',   width: 12 },
-    { key: 'hours',  width: 8  },
+    // Minutes-based durations don't divide cleanly (80 min = 1.333…h).
+    { key: 'hours',  width: 8, style: { numFmt: '0.##' } },
     { key: 'amount', width: 16 },
   ]
   addSheetHeader(sessionsSheet, 'SESSIONS', 4)
@@ -72,11 +74,16 @@ export async function exportToExcel(
     .sort((a, b) => a.date.localeCompare(b.date))
     .forEach((s) => {
       const isExtra = s.type === 'extra'
-      const amount = isMonthly
+      // The rate active on *this session's own date* decides how it's
+      // billed — not the student's current plan. A student who has
+      // switched between monthly and hourly has both kinds of session in
+      // their history.
+      const sessionIsMonthly = getRateAt(student, s.date).rateType === 'monthly'
+      const amount = sessionIsMonthly
         ? (isExtra ? (s.extraAmount ?? 0) : null)
         : (isExtra && typeof s.extraAmount === 'number'
             ? s.extraAmount
-            : parseFloat((s.hours * student.ratePerHour).toFixed(2)))
+            : parseFloat((s.hours * getRateAt(student, s.date).ratePerHour).toFixed(2)))
       sessionsSheet.addRow({ date: formatDate(s.date), type: s.type, hours: s.hours, amount })
     })
 
@@ -93,12 +100,12 @@ export async function exportToExcel(
   ]
   addSheetHeader(cyclesSheet, 'BILLING CYCLES', 7)
   applyBoldStyle(cyclesSheet.addRow({
-    period: isMonthly ? 'Cycle' : 'Month', hours: 'Hours', fee: 'Fee',
+    period: 'Period', hours: 'Hours', fee: 'Fee',
     extra: 'Extras', amount: 'Total', paid: 'Paid', balance: 'Balance',
   }))
   ledger.cycles.forEach((c) => {
     cyclesSheet.addRow({
-      period: isMonthly ? cycleLabel(c) : c.label,
+      period: c.rateType === 'monthly' ? cycleLabel(c) : c.label,
       hours: c.hours, fee: c.baseAmount, extra: c.extraAmount,
       amount: c.amount, paid: c.paid, balance: c.balance,
     })
@@ -164,7 +171,10 @@ export async function exportToExcel(
 
   summarySheet.addRow({ k: 'Student',       v: student.name })
   summarySheet.addRow({ k: 'City',          v: student.city ?? '' })
-  summarySheet.addRow({ k: 'Rate',          v: `${student.ratePerHour} ${currency}/${isMonthly ? 'month' : 'hr'}` })
+  summarySheet.addRow({
+    k: 'Rate',
+    v: `${currentRate.ratePerHour} ${currency}/${currentRate.rateType === 'monthly' ? 'month' : 'hr'}`,
+  })
   summarySheet.addRow({ k: 'Billing anchor', v: student.billingAnchorDate ? formatDate(student.billingAnchorDate) : '—' })
   if (student.endDate) summarySheet.addRow({ k: 'Left on', v: formatDate(student.endDate) })
   summarySheet.addRow({ k: 'Exported',      v: formatDate(todayISO()) })
@@ -189,6 +199,7 @@ export async function exportAllStudentsSummaryExcel(
   sessions: Session[],
   payments: Payment[],
   breaks: Break[] = [],
+  invoices: Invoice[] = [],
 ): Promise<void> {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'TutorsPad'
@@ -223,20 +234,21 @@ export async function exportAllStudentsSummaryExcel(
 
   students.forEach((student) => {
     const studentSessions = sessions.filter((x) => x.studentId === student.id)
-    const ledger   = getStudentLedger(student, sessions, payments, breaks)
+    const ledger   = getStudentLedger(student, sessions, payments, breaks, todayISO(), invoices)
     const currency = student.currency ?? DEFAULT_CURRENCY
-    const isMonthly = (student.rateType ?? 'hourly') === 'monthly'
 
     if (ledger.cycles.length === 0) {
       overviewSheet.addRow({
         student: student.name, period: '—', hours: 0,
-        rate: student.ratePerHour, earned: 0, paid: 0, balance: 0, currency,
+        rate: getRateAt(student, todayISO()).ratePerHour, earned: 0, paid: 0, balance: 0, currency,
       })
     } else {
+      // Each cycle's own type decides its label format — a student who
+      // switched between monthly and hourly has both kinds in their history.
       ledger.cycles.forEach((c) =>
         overviewSheet.addRow({
           student: student.name,
-          period: isMonthly ? cycleLabel(c) : c.label,
+          period: c.rateType === 'monthly' ? cycleLabel(c) : c.label,
           hours: c.hours, rate: c.rate,
           earned: c.amount, paid: c.paid, balance: c.balance, currency,
         }),
@@ -256,7 +268,6 @@ export async function exportAllStudentsSummaryExcel(
   // ── One sheet per student ────────────────────────────────────
   students.forEach((student) => {
     const currency  = student.currency ?? DEFAULT_CURRENCY
-    const isMonthly = (student.rateType ?? 'hourly') === 'monthly'
     const studentSessions = sessions
       .filter((x) => x.studentId === student.id)
       .slice()
@@ -265,14 +276,14 @@ export async function exportAllStudentsSummaryExcel(
       .filter((x) => x.studentId === student.id)
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date))
-    const ledger = getStudentLedger(student, sessions, payments, breaks)
+    const ledger = getStudentLedger(student, sessions, payments, breaks, todayISO(), invoices)
 
     const sheetName = student.name.replace(/[\\/:*?[\]]/g, '').slice(0, 31)
     const sheet = wb.addWorksheet(sheetName)
     sheet.columns = [
       { key: 'date',   width: 30 },
       { key: 'type',   width: 12 },
-      { key: 'hours',  width: 8  },
+      { key: 'hours',  width: 8, style: { numFmt: '0.##' } },
       { key: 'amount', width: 16 },
     ]
 
@@ -300,13 +311,16 @@ export async function exportAllStudentsSummaryExcel(
     applyBoldStyle(studentHeader)
     studentSessions.forEach((s) => {
       const isExtra = s.type === 'extra'
+      // The rate active on this session's own date decides how it's
+      // billed, not the student's current plan (see exportToExcel above).
+      const sessionIsMonthly = getRateAt(student, s.date).rateType === 'monthly'
       sheet.addRow({
         date: formatDate(s.date), type: s.type, hours: s.hours,
-        amount: isMonthly
+        amount: sessionIsMonthly
           ? (isExtra ? (s.extraAmount ?? 0) : null)
           : (isExtra && typeof s.extraAmount === 'number'
               ? s.extraAmount
-              : s.hours * student.ratePerHour),
+              : s.hours * getRateAt(student, s.date).ratePerHour),
       })
     })
 
@@ -315,7 +329,7 @@ export async function exportAllStudentsSummaryExcel(
     cycleHeader.font = { bold: true }
     ledger.cycles.forEach((c) =>
       sheet.addRow({
-        date: isMonthly ? cycleLabel(c) : c.label, type: '', hours: c.hours, amount: c.amount,
+        date: c.rateType === 'monthly' ? cycleLabel(c) : c.label, type: '', hours: c.hours, amount: c.amount,
       }),
     )
 
