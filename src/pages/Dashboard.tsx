@@ -49,6 +49,15 @@ export default function Dashboard() {
   const oneCurrency   = currencies.size <= 1
   const totalCurrency = oneCurrency ? [...currencies][0] ?? DEFAULT_CURRENCY : DEFAULT_CURRENCY
 
+  // The pending card is only a third of a phone screen wide, so step the type
+  // down as the amount grows rather than letting it spill out of the card.
+  const balanceText = formatCurrency(totalBalance, totalCurrency)
+  const balanceSize =
+    balanceText.length > 12 ? 'text-[11px]'
+    : balanceText.length > 9 ? 'text-xs'
+    : balanceText.length > 6 ? 'text-sm'
+    : 'text-lg'
+
   return (
     <div>
       <Header
@@ -59,20 +68,29 @@ export default function Dashboard() {
       <div className="px-4 space-y-4 pb-6">
         <PendingSessionBanner />
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="card text-center py-3">
-            <p className="text-2xl font-bold text-indigo-600">{students.length}</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="card text-center py-3 px-2 min-w-0">
+            <div className="h-7 sm:h-8 flex items-center justify-center">
+              <p className="text-xl sm:text-2xl font-bold text-indigo-600">{students.length}</p>
+            </div>
             <p className="text-xs text-gray-400 mt-0.5">Students</p>
           </div>
-          <div className="card text-center py-3">
-            <p className="text-2xl font-bold text-gray-800">{todaySessions.length}</p>
+          <div className="card text-center py-3 px-2 min-w-0">
+            <div className="h-7 sm:h-8 flex items-center justify-center">
+              <p className="text-xl sm:text-2xl font-bold text-gray-800">{todaySessions.length}</p>
+            </div>
             <p className="text-xs text-gray-400 mt-0.5">Today</p>
           </div>
-          <div className={`card text-center py-3 ${totalBalance > 0 ? 'border-red-100' : ''}`}>
-            <p className={`text-lg font-bold ${totalBalance > 0 ? 'text-red-500' : 'text-green-500'}`}>
-              {formatCurrency(totalBalance, totalCurrency)}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">
+          <div className={`card text-center py-3 px-2 min-w-0 ${totalBalance > 0 ? 'border-red-100' : ''}`}>
+            <div className="h-7 sm:h-8 flex items-center justify-center">
+              <p
+                title={balanceText}
+                className={`${balanceSize} font-bold tabular-nums leading-tight max-w-full inline-block truncate ${totalBalance > 0 ? 'text-red-500' : 'text-green-500'}`}
+              >
+                {balanceText}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">
               Pending{!oneCurrency && <span className="text-gray-300"> (mixed)</span>}
             </p>
           </div>
@@ -87,14 +105,14 @@ export default function Dashboard() {
         )}
 
         {monthHours > 0 && (
-          <div className="card flex items-center justify-between py-3">
-            <div>
-              <p className="text-xs text-gray-400 mb-0.5">{monthLabel}</p>
-              <p className="text-sm font-semibold text-gray-800">{formatDuration(monthHours)} taught</p>
+          <div className="card flex items-center justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <p className="text-xs text-gray-400 mb-0.5 truncate">{monthLabel}</p>
+              <p className="text-sm font-semibold text-gray-800 truncate">{formatDuration(monthHours)} taught</p>
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0">
               <p className="text-xs text-gray-400 mb-0.5">Billed</p>
-              <p className="text-base font-bold text-indigo-600">
+              <p className="text-base font-bold text-indigo-600 tabular-nums truncate">
                 {formatCurrency(monthEarnings, totalCurrency)}
               </p>
             </div>
