@@ -71,13 +71,13 @@ export default function Dashboard() {
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <div className="card text-center py-3 px-2 min-w-0">
             <div className="h-7 sm:h-8 flex items-center justify-center">
-              <p className="text-xl sm:text-2xl font-bold text-indigo-600">{students.length}</p>
+              <p className="text-lg font-bold text-indigo-600">{students.length}</p>
             </div>
             <p className="text-xs text-gray-400 mt-0.5">Students</p>
           </div>
           <div className="card text-center py-3 px-2 min-w-0">
             <div className="h-7 sm:h-8 flex items-center justify-center">
-              <p className="text-xl sm:text-2xl font-bold text-gray-800">{todaySessions.length}</p>
+              <p className="text-lg font-bold text-gray-800">{todaySessions.length}</p>
             </div>
             <p className="text-xs text-gray-400 mt-0.5">Today</p>
           </div>
