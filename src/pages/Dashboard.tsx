@@ -24,7 +24,8 @@ export default function Dashboard() {
   const currentMonth  = currentYM()
 
   const monthSessions = sessions.filter((s) => s.date.startsWith(currentMonth))
-  const monthHours    = parseFloat(monthSessions.reduce((sum, s) => sum + s.hours, 0).toFixed(1))
+  // Raw sum, left unrounded — formatDuration already rounds to the nearest minute.
+  const monthHours    = monthSessions.reduce((sum, s) => sum + s.hours, 0)
 
   // Build each student's cycles once, then read both figures off them —
   // rebuilding per student per metric was the expensive part.
