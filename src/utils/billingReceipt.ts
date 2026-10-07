@@ -19,7 +19,7 @@
  */
 import { formatCurrency, openPDFWindow } from './billing'
 import { getRateAt, getBillingCycles } from './billingCore'
-import { formatDate, todayISO, formatDayMonth } from './date'
+import { formatDate, todayISO, formatDayMonth, formatDuration } from './date'
 import { buildReceiptHTML } from './templates/receiptTemplate'
 import { DEFAULT_CURRENCY } from '@constants'
 import type { Student, Session, Payment, Break, Invoice, Receipt } from '@/types'
@@ -143,12 +143,13 @@ export function issueReceipt(
   const creditHours   = isMonthly || !rateAtPayment.ratePerHour
     ? null
     : round2(creditBalance / rateAtPayment.ratePerHour)
+  const creditDuration = creditHours === null ? '' : formatDuration(Math.abs(creditHours))
 
   const html = buildReceiptHTML({
     recNo, teacherName, issued,
     student: { ...student, ratePerHour: rateAtPayment.ratePerHour },
     isMonthly,
-    payment, periodLabel, carryForward, periodDue, creditBalance, creditHours, fmt,
+    payment, periodLabel, carryForward, periodDue, creditBalance, creditHours, creditDuration, fmt,
   })
 
   return {

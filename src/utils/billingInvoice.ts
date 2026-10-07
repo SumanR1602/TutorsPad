@@ -13,7 +13,7 @@
  * documents rather than by re-costing history:
  *
  *   previousBalance = Σ issued invoice totals − Σ payments received
- *   amountDueNow    = previousBalance + charges + adjustments
+ *   amountDueNow    = previousBalance + charges + adjustments + roundOff
  *
  * Summing invoice totals only works because `Invoice.total` is this
  * invoice's own charges plus its own adjustments — brought-forward arrears
@@ -40,6 +40,16 @@ const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 1
 
 const sumAdjustments = (adjustments: InvoiceAdjustment[]): number =>
   round2(adjustments.reduce((sum, a) => sum + (a.amount || 0), 0))
+
+/** An invoice's own value in whole rupees, with the round-off that got it there. */
+function invoiceTotals(
+  charges: number,
+  adjustments: InvoiceAdjustment[],
+): { roundOff: number; total: number } {
+  const exact = round2(charges + sumAdjustments(adjustments))
+  const total = Math.round(exact)
+  return { roundOff: round2(total - exact), total }
+}
 
 /** What one hourly session costs, honoring rate history and per-session extras. */
 function sessionCost(student: Student, s: Session): number {
@@ -223,28 +233,11 @@ function computeInvoiceData(
     .map((s) => ({ session: s, raw: sessionCost(student, s) - (billed.get(s.id)?.amount ?? 0) }))
     .filter((d) => round2(d.raw) !== 0)
 
-  // Ledger cycles round each hourly month once, as a whole. Rounding every
-  // session's own delta instead — as this used to — can add up to a few
-  // paisa off that figure, since each fractional session gets nudged on its
-  // own. Grouping by month and rounding all but the last share normally,
-  // with the last one forced to the exact remainder, keeps this total
-  // identical to what the ledger shows for the same stretch.
-  const byMonth = new Map<string, typeof hourlyCandidates>()
-  for (const c of hourlyCandidates) {
-    const key = c.session.date.slice(0, 7)
-    if (!byMonth.has(key)) byMonth.set(key, [])
-    byMonth.get(key)!.push(c)
-  }
-  for (const group of byMonth.values()) {
-    const target = round2(group.reduce((sum, d) => sum + d.raw, 0))
-    let allocated = 0
-    group.forEach((d, idx) => {
-      const delta = idx === group.length - 1 ? round2(target - allocated) : round2(d.raw)
-      if (idx !== group.length - 1) allocated = round2(allocated + delta)
-      charges = round2(charges + delta)
-      coverage.push({ ref: d.session.id, kind: 'session', amount: delta })
-      hourlyBilled.push({ session: d.session, amount: delta })
-    })
+  for (const d of hourlyCandidates) {
+    const delta = round2(d.raw)
+    charges = round2(charges + delta)
+    coverage.push({ ref: d.session.id, kind: 'session', amount: delta })
+    hourlyBilled.push({ session: d.session, amount: delta })
   }
 
   // Anything billed before that no longer exists at all — a deleted session,
@@ -356,15 +349,16 @@ export function previewInvoiceTotals(
   invoices: Invoice[] = [],
 ): {
   periodLabel: string; charges: number; sessionCount: number
-  previousBalance: number; total: number; amountDueNow: number
+  previousBalance: number; roundOff: number; total: number; amountDueNow: number
 } {
   const data = computeInvoiceData(student, sessions, payments, dateFrom, dateTo, breaks, invoices)
-  const total = round2(data.charges + sumAdjustments(adjustments))
+  const { roundOff, total } = invoiceTotals(data.charges, adjustments)
   return {
     periodLabel: data.periodLabel,
     charges: data.charges,
     sessionCount: data.sessionCount,
     previousBalance: data.previousBalance,
+    roundOff,
     total,
     amountDueNow: round2(data.previousBalance + total),
   }
@@ -396,12 +390,12 @@ function render(
   adjustments: InvoiceAdjustment[],
   invNo: string,
   isDraft: boolean,
-): { html: string; total: number; amountDueNow: number } {
+): { html: string; roundOff: number; total: number; amountDueNow: number } {
   const currency = student.currency ?? DEFAULT_CURRENCY
   const fmt      = (n: number) => formatCurrency(n, currency)
   const currentRate = getRateAt(student, todayISO())
 
-  const total = round2(data.charges + sumAdjustments(adjustments))
+  const { roundOff, total } = invoiceTotals(data.charges, adjustments)
   const amountDueNow = round2(data.previousBalance + total)
 
   const html = buildInvoiceHTML({
@@ -411,10 +405,10 @@ function render(
     periodLabel: data.periodLabel, sessionCount: data.sessionCount,
     totalHoursLabel: data.totalHoursLabel,
     charges: data.charges, previousBalance: data.previousBalance, amountDueNow,
-    sessionRows: data.sessionRows, fmt, adjustments, isDraft,
+    sessionRows: data.sessionRows, fmt, adjustments, roundOff, isDraft,
   })
 
-  return { html, total, amountDueNow }
+  return { html, roundOff, total, amountDueNow }
 }
 
 /** Renders a draft to HTML for on-screen review. Watermarked, unnumbered, never stored. */
@@ -453,13 +447,13 @@ export function finalizeInvoice(
   invoices: Invoice[] = [],
 ): Pick<Invoice,
   'status' | 'invoiceNumber' | 'issuedDate' | 'periodLabel' | 'coverage'
-  | 'charges' | 'total' | 'previousBalance' | 'amountDueNow' | 'html'
+  | 'charges' | 'roundOff' | 'total' | 'previousBalance' | 'amountDueNow' | 'html'
 > {
   const adjustments = draft.adjustments ?? []
   const data = computeInvoiceData(
     student, sessions, payments, draft.periodFrom, draft.periodTo, breaks, invoices,
   )
-  const { html, total, amountDueNow } =
+  const { html, roundOff, total, amountDueNow } =
     render(student, teacherName, data, adjustments, invoiceNumber, false)
 
   return {
@@ -469,6 +463,7 @@ export function finalizeInvoice(
     periodLabel: data.periodLabel,
     coverage: data.coverage,
     charges: data.charges,
+    roundOff,
     total,
     previousBalance: data.previousBalance,
     amountDueNow,
@@ -520,6 +515,7 @@ export function buildCreditNote(
   const coverage    = (original.coverage ?? []).map((c) => ({ ...c, amount: round2(-c.amount) }))
   const adjustments = (original.adjustments ?? []).map((a) => ({ ...a, amount: round2(-a.amount) }))
   const charges     = round2(-original.charges)
+  const roundOff    = round2(-(original.roundOff ?? 0))
   const total       = round2(-original.total)
   const previousBalance = previousBalanceFor(student, payments, invoices)
   const amountDueNow    = round2(previousBalance + total)
@@ -537,7 +533,7 @@ export function buildCreditNote(
     isMonthly: currentRate.rateType === 'monthly',
     periodLabel: original.periodLabel, sessionCount: 0, totalHoursLabel: formatDuration(0),
     charges, previousBalance, amountDueNow,
-    sessionRows: rows, fmt, adjustments, isDraft: false, isCreditNote: true,
+    sessionRows: rows, fmt, adjustments, roundOff, isDraft: false, isCreditNote: true,
   })
 
   return {
@@ -551,6 +547,7 @@ export function buildCreditNote(
     coverage,
     charges,
     adjustments,
+    roundOff,
     total,
     previousBalance,
     amountDueNow,

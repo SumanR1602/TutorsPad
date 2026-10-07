@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Clock, RotateCcw } from 'lucide-react'
 import useAppStore from '@store/useStore'
+import { hasLeft } from '@utils/billingCore'
 import { convertISTtoTZ, getCurrentTimeInTZ, isReasonableHour, nowInTeacherTZ } from '@utils/timezone'
 import { TEACHER_TIMEZONE } from '@constants'
 import TimePicker12h from '../shared/TimePicker12h'
@@ -9,7 +10,8 @@ import TimePicker12h from '../shared/TimePicker12h'
 const getNowIST = () => nowInTeacherTZ(TEACHER_TIMEZONE)
 
 export default function TimezoneConverter() {
-  const students = useAppStore((s) => s.students)
+  const allStudents = useAppStore((s) => s.students)
+  const students = allStudents.filter((s) => !hasLeft(s))
   const [istTime, setIstTime] = useState<string>(getNowIST)
 
   // Tick every second to keep "Current IST" display live

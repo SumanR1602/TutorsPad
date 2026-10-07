@@ -123,9 +123,12 @@ export interface Invoice {
   /** Cost of the work newly billed here, before adjustments. */
   charges: number
   adjustments: InvoiceAdjustment[]
+  /** Whole-rupee round-off applied at issue, e.g. -0.40. Absent on older invoices. */
+  roundOff?: number
   /**
-   * charges + sum(adjustments) — this invoice's *own* value. Deliberately
-   * excludes brought-forward arrears, or summing invoices would double-count.
+   * charges + sum(adjustments) + roundOff — this invoice's *own* value, in
+   * whole rupees. Deliberately excludes brought-forward arrears, or summing
+   * invoices would double-count.
    */
   total: number
   /** Prior invoice totals minus payments, at issue time. Display only. */

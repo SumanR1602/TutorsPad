@@ -450,6 +450,40 @@ describe('credit notes', () => {
   })
 })
 
+describe('whole-rupee round-off', () => {
+  // Three 20-minute classes at ₹500/hr: 3 × ₹166.67 = ₹500.01.
+  const sessions = () =>
+    [1, 2, 3].map((d) => session(`2026-09-0${d}`, { hours: 20 / 60 }))
+
+  it('rounds the invoice to the rupee and records the difference', () => {
+    const s = hourlyStudent()
+    const inv = issue(s, sessions(), [], [], [], 'inv-1')
+    expect(inv.charges).toBeCloseTo(500.01, 2)
+    expect(inv.roundOff).toBeCloseTo(-0.01, 2)
+    expect(inv.total).toBe(500)
+    expect(inv.amountDueNow).toBe(500)
+  })
+
+  it('leaves nothing pending once the rounded amount is paid', () => {
+    const s = hourlyStudent()
+    const list = sessions()
+    const inv = issue(s, list, [], [], [], 'inv-1')
+    const paid = [payment('2026-09-25', 500)]
+
+    expect(previousBalanceFor(s, paid, [inv])).toBe(0)
+    const ledger = getStudentLedger(s, list, paid, [], '2026-09-30', [inv])
+    expect(ledger.balance).toBe(0)
+  })
+
+  it('negates the round-off on a credit note so the two cancel', () => {
+    const s = hourlyStudent()
+    const inv = issue(s, sessions(), [], [], [], 'inv-1')
+    const note = buildCreditNote(s, inv, 'T', [], [inv], nextCreditNoteNumber([inv], '2026-09-21'))
+    expect(note.roundOff).toBeCloseTo(0.01, 2)
+    expect(note.total).toBe(-500)
+  })
+})
+
 describe('over-discounting', () => {
   it('does not invent credit the student never paid', () => {
     const s = hourlyStudent()
@@ -468,6 +502,19 @@ describe('over-discounting', () => {
     const inv = issue(s, all, [], [{ description: 'Waiver', amount: -8000 }], [], 'inv-1')
     const ledger = getStudentLedger(s, all, [payment('2026-09-20', 500)], [], '2026-09-30', [inv])
     expect(ledger.credit).toBe(500)
+  })
+})
+
+describe('receipt hours wording', () => {
+  it('prints an unpaid 20-minute balance as 20m, not decimal hours', () => {
+    const s = hourlyStudent()
+    const sessions = [
+      session('2026-09-02', { hours: 20 / 60 }),
+      session('2026-09-03', { hours: 20 / 60 }),
+    ]
+    const pay = payment('2026-09-10', 166.67)
+    const rec = issueReceipt(s, sessions, [pay], pay, 'T', [], 'REC-2026-0001', [])
+    expect(rec?.html).toContain('<strong>20m</strong> of sessions not yet paid')
   })
 })
 

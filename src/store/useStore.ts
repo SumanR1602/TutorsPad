@@ -81,7 +81,7 @@ interface StoreState {
     id: string,
     frozen: Pick<Invoice,
       'status' | 'invoiceNumber' | 'issuedDate' | 'periodLabel' | 'coverage'
-      | 'charges' | 'total' | 'previousBalance' | 'amountDueNow' | 'html'>,
+      | 'charges' | 'roundOff' | 'total' | 'previousBalance' | 'amountDueNow' | 'html'>,
   ) => void
   voidInvoice: (id: string) => void
   /** Records a frozen credit note reversing an issued invoice. */

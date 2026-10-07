@@ -22,7 +22,6 @@ export default function Dashboard() {
   const todaySessions = sessions.filter((s) => s.date === today)
   const streak        = calcStreak(sessions)
   const currentMonth  = currentYM()
-
   const monthSessions = sessions.filter((s) => s.date.startsWith(currentMonth))
   // Raw sum, left unrounded — formatDuration already rounds to the nearest minute.
   const monthHours    = monthSessions.reduce((sum, s) => sum + s.hours, 0)

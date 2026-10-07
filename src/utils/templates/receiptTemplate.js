@@ -11,7 +11,7 @@ function escHtml(str) {
 
 export function buildReceiptHTML({
   recNo, teacherName, issued, student, isMonthly,
-  payment, periodLabel, carryForward, periodDue, creditBalance, creditHours, fmt,
+  payment, periodLabel, carryForward, periodDue, creditBalance, creditHours, creditDuration, fmt,
 }) {
   const balancePositive = creditBalance >= 0
   const balanceIsZero   = creditBalance === 0
@@ -293,8 +293,8 @@ export function buildReceiptHTML({
     ${!isMonthly && creditHours !== null && !balanceIsZero ? `
     <div class="hrs-line">
       ${balancePositive
-        ? `&asymp; <strong>${Math.abs(creditHours).toFixed(1)} hrs</strong> of sessions pre-paid`
-        : `<strong>${Math.abs(creditHours).toFixed(1)} hrs</strong> of sessions not yet paid`
+        ? `&asymp; <strong>${creditDuration}</strong> of sessions pre-paid`
+        : `<strong>${creditDuration}</strong> of sessions not yet paid`
       }
     </div>` : ''}
 

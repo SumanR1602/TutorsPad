@@ -316,7 +316,7 @@ function buildHourlyCycles(args: SegmentArgs): BillingCycle[] {
     let extraAmount = 0
     for (const s of inCycle) {
       if (s.type === 'extra' && typeof s.extraAmount === 'number') extraAmount += s.extraAmount
-      else baseAmount += s.hours * rate.ratePerHour
+      else baseAmount += round2(s.hours * rate.ratePerHour)
     }
 
     const clipped = start !== monthStart || end !== monthEnd
@@ -478,7 +478,8 @@ function applyInvoiceAdjustments(
 
   for (const inv of issued) {
     const adjTotal = round2((inv.adjustments ?? []).reduce((sum, a) => sum + (a.amount || 0), 0))
-    if (!adjTotal) continue
+    const roundOff = round2(inv.roundOff ?? 0)
+    if (!adjTotal && !roundOff) continue
 
     const weights = new Map<string, number>()
     let totalWeight = 0
@@ -496,7 +497,7 @@ function applyInvoiceAdjustments(
     }
 
     if (totalWeight <= 0) {
-      remainder = round2(remainder + adjTotal)
+      remainder = round2(remainder + adjTotal + roundOff)
       continue
     }
 
@@ -505,13 +506,23 @@ function applyInvoiceAdjustments(
     // exactly, instead of drifting a paisa or two from independent rounding.
     const keys = [...weights.keys()]
     let allocated = 0
-    keys.forEach((key, idx) => {
-      const share = idx === keys.length - 1
-        ? round2(adjTotal - allocated)
-        : round2(adjTotal * ((weights.get(key) ?? 0) / totalWeight))
-      if (idx !== keys.length - 1) allocated = round2(allocated + share)
-      perCycle.set(key, round2((perCycle.get(key) ?? 0) + share))
-    })
+    if (adjTotal) {
+      keys.forEach((key, idx) => {
+        const share = idx === keys.length - 1
+          ? round2(adjTotal - allocated)
+          : round2(adjTotal * ((weights.get(key) ?? 0) / totalWeight))
+        if (idx !== keys.length - 1) allocated = round2(allocated + share)
+        perCycle.set(key, round2((perCycle.get(key) ?? 0) + share))
+      })
+    }
+
+    // The round-off is one number for the whole invoice; it sits on the
+    // latest cycle it covered so every other cycle keeps its exact amount.
+    if (roundOff) {
+      const startOf = (k: string) => cycles.find((c) => c.key === k)?.start ?? ''
+      const latest = keys.reduce((a, b) => (startOf(b) > startOf(a) ? b : a), keys[0])
+      perCycle.set(latest, round2((perCycle.get(latest) ?? 0) + roundOff))
+    }
   }
 
   const adjusted = cycles.map((c) => {

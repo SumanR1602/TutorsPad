@@ -13,6 +13,7 @@ export function buildInvoiceHTML({
   periodLabel, sessionCount, totalHoursLabel, charges, previousBalance, amountDueNow,
   sessionRows, fmt,
   adjustments = /** @type {{ description: string, amount: number }[]} */ ([]),
+  roundOff = 0,
   isDraft = false,
   isCreditNote = false,
 }) {
@@ -325,6 +326,13 @@ export function buildInvoiceHTML({
             ${a.amount < 0 ? '-' : ''}${fmt(Math.abs(a.amount))}
           </span>
         </div>`).join('')}
+        ${roundOff !== 0 ? `
+        <div class="sum-row">
+          <span class="lbl">Round off</span>
+          <span class="val" style="color:${roundOff < 0 ? '#dc2626' : '#0f172a'}">
+            ${roundOff < 0 ? '-' : '+'}${fmt(Math.abs(roundOff))}
+          </span>
+        </div>` : ''}
         <div class="due-row" style="background:${dueBg};border-top:2px solid #e2e8f0;${dueBorder !== 'none' ? 'border:'+dueBorder+';' : ''}">
           <span style="color:${dueColor}">${dueLabel}</span>
           <span style="color:${dueColor};font-size:18px">${fmt(Math.abs(amountDueNow))}</span>
